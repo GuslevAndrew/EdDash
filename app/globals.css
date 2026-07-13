@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  background: #f8fafc;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #111827;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #dbeafe;
+  color: #0f172a;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input[type="checkbox"] {
+  accent-color: #2563eb;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+summary {
+  outline-color: #2563eb;
+}
+
+table,
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.recharts-tooltip-wrapper {
+  outline: none;
+}

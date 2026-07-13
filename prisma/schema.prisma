@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Region {
+  id        Int      @id @default(autoincrement())
+  externalId String?  @unique
+  code      String?  @unique
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  institutions Institution[]
+  snapshots    StudentSnapshot[]
+  yearlyOutcomes YearlyOutcome[]
+}
+
+model Speciality {
+  id                 Int      @id @default(autoincrement())
+  externalId         String?  @unique
+  code               String?  @unique
+  name               String
+  fieldCode          String?
+  fieldName          String?
+  canonicalCode      String?
+  canonicalName      String?
+  canonicalFieldCode String?
+  canonicalFieldName String?
+  canonicalSource    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  snapshots StudentSnapshot[]
+  yearlyOutcomes YearlyOutcome[]
+
+  @@index([canonicalCode])
+  @@index([canonicalFieldCode])
+}
+
+model Institution {
+  id                  Int      @id @default(autoincrement())
+  externalId          String?  @unique
+  parentExternalId    String?
+  name                String
+  shortName           String?
+  institutionTypeCode String   @default("1")
+  institutionTypeName String   @default("Вища освіта")
+  foundationYear      String?
+  ownership           String?
+  settlement          String?
+  address             String?
+  phone               String?
+  email               String?
+  website             String?
+  blockedAt           String?
+  regionId            Int
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  region    Region            @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  snapshots StudentSnapshot[]
+  yearlyOutcomes YearlyOutcome[]
+
+  @@index([regionId])
+  @@index([institutionTypeCode])
+  @@index([parentExternalId])
+}
+
+model EducationLevel {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  snapshots StudentSnapshot[]
+  yearlyOutcomes YearlyOutcome[]
+}
+
+model EntryBase {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  snapshots StudentSnapshot[]
+  yearlyOutcomes YearlyOutcome[]
+}
+
+model StudyForm {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  snapshots StudentSnapshot[]
+  yearlyOutcomes YearlyOutcome[]
+}
+
+model StudentSnapshot {
+  id               Int      @id @default(autoincrement())
+  snapshotDate     DateTime
+  institutionId    Int
+  regionId         Int
+  specialityId     Int
+  educationLevelId Int
+  entryBaseId      Int
+  studyFormId      Int?
+  studentsCount    Int
+  sourceHash       String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  institution    Institution    @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  region         Region         @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  speciality     Speciality     @relation(fields: [specialityId], references: [id], onDelete: Restrict)
+  educationLevel EducationLevel @relation(fields: [educationLevelId], references: [id], onDelete: Restrict)
+  entryBase      EntryBase      @relation(fields: [entryBaseId], references: [id], onDelete: Restrict)
+  studyForm      StudyForm?     @relation(fields: [studyFormId], references: [id], onDelete: Restrict)
+
+  @@unique([snapshotDate, institutionId, specialityId, educationLevelId, entryBaseId, studyFormId])
+  @@index([snapshotDate])
+  @@index([institutionId])
+  @@index([regionId])
+  @@index([specialityId])
+  @@index([educationLevelId])
+  @@index([entryBaseId])
+  @@index([studyFormId])
+}
+
+model YearlyOutcome {
+  id               Int      @id @default(autoincrement())
+  type             String
+  year             Int
+  institutionId    Int
+  regionId         Int
+  specialityId     Int
+  educationLevelId Int
+  entryBaseId      Int
+  studyFormId      Int?
+  personsCount     Int
+  sourceHash       String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  institution    Institution    @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  region         Region         @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  speciality     Speciality     @relation(fields: [specialityId], references: [id], onDelete: Restrict)
+  educationLevel EducationLevel @relation(fields: [educationLevelId], references: [id], onDelete: Restrict)
+  entryBase      EntryBase      @relation(fields: [entryBaseId], references: [id], onDelete: Restrict)
+  studyForm      StudyForm?     @relation(fields: [studyFormId], references: [id], onDelete: Restrict)
+
+  @@unique([type, year, institutionId, specialityId, educationLevelId, entryBaseId, studyFormId])
+  @@index([type])
+  @@index([year])
+  @@index([institutionId])
+  @@index([regionId])
+  @@index([specialityId])
+  @@index([educationLevelId])
+  @@index([entryBaseId])
+  @@index([studyFormId])
+}
+
+model ImportRun {
+  id              Int       @id @default(autoincrement())
+  type            String
+  status          String
+  startedAt       DateTime
+  finishedAt      DateTime?
+  recordsReceived Int       @default(0)
+  recordsCreated  Int       @default(0)
+  recordsUpdated  Int       @default(0)
+  recordsSkipped  Int       @default(0)
+  errorsCount     Int       @default(0)
+  errorMessage    String?
+  parametersJson  String?
+  createdAt       DateTime  @default(now())
+
+  @@index([startedAt])
+  @@index([status])
+  @@index([type])
+}
