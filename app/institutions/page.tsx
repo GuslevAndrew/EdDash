@@ -426,10 +426,6 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
     ...currentParams,
     pageSize: String(showMoreSize)
   };
-  const showAllParams = {
-    ...currentParams,
-    pageSize: String(total)
-  };
 
   return (
     <AppShell>
@@ -736,12 +732,6 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
                   href={makePageHref(showMoreParams, 1)}
                 >
                   Показати ще
-                </Link>
-                <Link
-                  className="rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-slate-50"
-                  href={makePageHref(showAllParams, 1)}
-                >
-                  Показати всі
                 </Link>
               </>
             ) : null}
