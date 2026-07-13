@@ -118,6 +118,17 @@ function compareText(first: string, second: string): number {
   return first.localeCompare(second, "uk", { sensitivity: "base", numeric: true });
 }
 
+function compareRegionName(first: string, second: string): number {
+  const priority = (name: string) => {
+    if (name === "м. Київ") return 0;
+    if (name === "Без регіону") return 1;
+    return 2;
+  };
+  const priorityDelta = priority(first) - priority(second);
+  if (priorityDelta !== 0) return priorityDelta;
+  return compareText(first, second);
+}
+
 function compareInstitutionRefs(
   first: InstitutionSortRef,
   second: InstitutionSortRef,
@@ -457,7 +468,12 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
                 hideResetButton
               />
 
-              <RegionFilter regions={regions.map((region) => ({ id: region.id, name: region.name }))} selectedRegionIds={regionIds} />
+              <RegionFilter
+                regions={regions
+                  .map((region) => ({ id: region.id, name: region.name }))
+                  .sort((first, second) => compareRegionName(first.name, second.name))}
+                selectedRegionIds={regionIds}
+              />
 
               <div className="md:col-span-2">
                 <InstitutionMultiSelect
