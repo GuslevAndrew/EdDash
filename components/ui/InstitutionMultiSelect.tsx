@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAutoCloseDetails } from "@/components/ui/useAutoCloseDetails";
 
 type InstitutionOption = {
@@ -11,36 +11,87 @@ type InstitutionOption = {
 type InstitutionMultiSelectProps = {
   institutions: InstitutionOption[];
   selectedInstitutionIds: number[];
+  levelCodes?: string[];
+  regionIds?: number[];
+  showBlocked?: boolean;
 };
 
-function matchesQuery(label: string, query: string): boolean {
-  const normalizedLabel = label.toLocaleLowerCase("uk-UA");
-  const words = query
-    .toLocaleLowerCase("uk-UA")
-    .split(/\s+/)
-    .map((word) => word.trim())
-    .filter(Boolean);
+type InstitutionSearchResponse = {
+  items: InstitutionOption[];
+  minSearchLength: number;
+};
 
-  return words.every((word) => normalizedLabel.includes(word));
-}
+const minSearchLength = 3;
 
-export function InstitutionMultiSelect({ institutions, selectedInstitutionIds }: InstitutionMultiSelectProps) {
+export function InstitutionMultiSelect({
+  institutions,
+  selectedInstitutionIds,
+  levelCodes = [],
+  regionIds = [],
+  showBlocked = false
+}: InstitutionMultiSelectProps) {
   const [query, setQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState(() => selectedInstitutionIds.map(String));
+  const [options, setOptions] = useState(institutions);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const detailsRef = useAutoCloseDetails();
 
   const selectedNames = useMemo(
-    () => institutions.filter((institution) => selectedIds.includes(String(institution.id))).map((institution) => institution.name),
-    [institutions, selectedIds]
+    () => options.filter((institution) => selectedIds.includes(String(institution.id))).map((institution) => institution.name),
+    [options, selectedIds]
   );
+
   const label = useMemo(() => {
     if (!selectedNames.length) return "Оберіть заклад освіти";
     if (selectedNames.length <= 2) return selectedNames.join(", ");
     return `Обрано закладів: ${selectedNames.length}`;
   }, [selectedNames]);
-  const filteredInstitutions = query
-    ? institutions.filter((institution) => matchesQuery(institution.name, query))
-    : institutions;
+
+  useEffect(() => {
+    setOptions(institutions);
+  }, [institutions]);
+
+  useEffect(() => {
+    const normalizedQuery = query.trim();
+
+    if (normalizedQuery.length > 0 && normalizedQuery.length < minSearchLength) {
+      setError("");
+      setOptions((current) => current.filter((institution) => selectedIds.includes(String(institution.id))));
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      const params = new URLSearchParams();
+      if (normalizedQuery.length >= minSearchLength) params.set("q", normalizedQuery);
+      for (const levelCode of levelCodes) params.append("level", levelCode);
+      for (const regionId of regionIds) params.append("region", String(regionId));
+      for (const selectedId of selectedIds) params.append("selected", selectedId);
+      if (showBlocked) params.set("showBlocked", "1");
+
+      setIsLoading(true);
+      setError("");
+      try {
+        const response = await fetch(`/api/institutions/search?${params.toString()}`, {
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error("Search request failed");
+        const data = (await response.json()) as InstitutionSearchResponse;
+        setOptions(data.items);
+      } catch (searchError) {
+        if (searchError instanceof DOMException && searchError.name === "AbortError") return;
+        setError("Не вдалося завантажити заклади освіти.");
+      } finally {
+        if (!controller.signal.aborted) setIsLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [levelCodes, query, regionIds, selectedIds, showBlocked]);
 
   function toggleInstitution(institutionId: number, checked: boolean) {
     setSelectedIds((current) => {
@@ -52,7 +103,14 @@ export function InstitutionMultiSelect({ institutions, selectedInstitutionIds }:
 
   function resetSelection() {
     setSelectedIds([]);
+    setQuery("");
+    setOptions([]);
   }
+
+  const trimmedQuery = query.trim();
+  const shouldPromptForQuery = !trimmedQuery && !selectedIds.length;
+  const shouldPromptForMoreCharacters = trimmedQuery.length > 0 && trimmedQuery.length < minSearchLength;
+  const shouldShowEmptyState = trimmedQuery.length >= minSearchLength && !isLoading && !options.length;
 
   return (
     <div className="block">
@@ -67,7 +125,7 @@ export function InstitutionMultiSelect({ institutions, selectedInstitutionIds }:
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             className="mb-2 w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-brand-500"
-            placeholder="Пошук у списку"
+            placeholder="Введіть щонайменше 3 символи"
           />
           <button
             type="button"
@@ -77,7 +135,13 @@ export function InstitutionMultiSelect({ institutions, selectedInstitutionIds }:
           >
             Скинути
           </button>
-          {filteredInstitutions.map((institution) => (
+
+          {isLoading ? <p className="px-2 py-3 text-sm text-muted">Завантажую заклади...</p> : null}
+          {error ? <p className="px-2 py-3 text-sm text-rose-700">{error}</p> : null}
+          {shouldPromptForQuery ? <p className="px-2 py-3 text-sm text-muted">Почніть вводити назву закладу освіти.</p> : null}
+          {shouldPromptForMoreCharacters ? <p className="px-2 py-3 text-sm text-muted">Для пошуку введіть ще кілька символів.</p> : null}
+
+          {options.map((institution) => (
             <label key={institution.id} className="flex cursor-pointer items-start gap-2 rounded px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
               <input
                 type="checkbox"
@@ -90,7 +154,8 @@ export function InstitutionMultiSelect({ institutions, selectedInstitutionIds }:
               <span>{institution.name}</span>
             </label>
           ))}
-          {!filteredInstitutions.length ? <p className="px-2 py-3 text-sm text-muted">Нічого не знайдено</p> : null}
+
+          {shouldShowEmptyState ? <p className="px-2 py-3 text-sm text-muted">Нічого не знайдено</p> : null}
         </div>
       </details>
     </div>

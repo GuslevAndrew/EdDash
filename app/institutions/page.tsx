@@ -14,6 +14,7 @@ type PageProps = {
 };
 
 const defaultPageSize = 25;
+const maxPageSize = 250;
 const sortKeys = ["institution", "parent", "region", "students", "foundationYear", "ownership"] as const;
 const sortDirections = ["asc", "desc"] as const;
 
@@ -202,7 +203,7 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
     : "asc";
   const requestedPageSize = Number(getParam(rawParams, "pageSize"));
   const pageSize = Number.isFinite(requestedPageSize) && requestedPageSize > 0
-    ? Math.floor(requestedPageSize)
+    ? Math.min(Math.floor(requestedPageSize), maxPageSize)
     : defaultPageSize;
 
   const where: Prisma.InstitutionWhereInput = {
@@ -211,12 +212,6 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
     id: selectedInstitutionIds.length ? { in: selectedInstitutionIds } : undefined,
     blockedAt: showBlocked ? undefined : null
   };
-  const suggestionsWhere: Prisma.InstitutionWhereInput = {
-    institutionTypeCode: { in: filteredInstitutionTypeCodes },
-    regionId: regionIds.length ? { in: regionIds } : undefined,
-    blockedAt: showBlocked ? undefined : null
-  };
-
   const statsWhere: Prisma.InstitutionWhereInput = {
     institutionTypeCode: { in: ["1", "9"] },
     blockedAt: showBlocked ? undefined : null
@@ -225,7 +220,7 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
   const [
     regions,
     filteredInstitutionRefs,
-    suggestionInstitutionRefs,
+    selectedInstitutionOptions,
     totalByLevel,
     totalRegions,
     latestSnapshot,
@@ -253,10 +248,13 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
         region: { select: { name: true } }
       }
     }),
-    prisma.institution.findMany({
-      where: suggestionsWhere,
-      select: { id: true, name: true }
-    }),
+    selectedInstitutionIds.length
+      ? prisma.institution.findMany({
+          where: { id: { in: selectedInstitutionIds } },
+          select: { id: true, name: true },
+          orderBy: { name: "asc" }
+        })
+      : Promise.resolve([]),
     prisma.institution.groupBy({
       by: ["institutionTypeCode", "institutionTypeName"],
       where: statsWhere,
@@ -358,9 +356,6 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
   const sortedInstitutionRefs = [...filteredInstitutionRefs].sort((first, second) =>
     compareInstitutionRefs(first, second, sortKey, sortDirection, parentNamesByExternalId, studentsByInstitution)
   );
-  const sortedSuggestionInstitutionRefs = [...suggestionInstitutionRefs].sort((first, second) =>
-    institutionSortKey(first.name).localeCompare(institutionSortKey(second.name), "uk", { sensitivity: "base" })
-  );
   const total = sortedInstitutionRefs.length;
   const pageInstitutionIds = sortedInstitutionRefs
     .slice((page - 1) * pageSize, page * pageSize)
@@ -406,8 +401,8 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const showMoreSize = Math.min(pageSize + defaultPageSize, total);
-  const canShowMore = pageSize < total;
+  const showMoreSize = Math.min(pageSize + defaultPageSize, total, maxPageSize);
+  const canShowMore = pageSize < total && pageSize < maxPageSize;
   const currentParams = {
     ...(selectedInstitutionTypeCodes.length ? { level: selectedInstitutionTypeCodes } : {}),
     ...(regionIds.length ? { region: regionIds.map(String) } : {}),
@@ -466,8 +461,11 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
 
               <div className="md:col-span-2">
                 <InstitutionMultiSelect
-                  institutions={sortedSuggestionInstitutionRefs}
+                  institutions={selectedInstitutionOptions}
                   selectedInstitutionIds={selectedInstitutionIds}
+                  levelCodes={filteredInstitutionTypeCodes}
+                  regionIds={regionIds}
+                  showBlocked={showBlocked}
                 />
               </div>
             </div>
