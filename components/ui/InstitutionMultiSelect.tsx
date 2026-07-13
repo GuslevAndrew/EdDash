@@ -125,7 +125,7 @@ export function InstitutionMultiSelect({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             className="mb-2 w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-brand-500"
-            placeholder="Введіть щонайменше 3 символи"
+            placeholder="Пошук у списку: введіть перші три літери назви закладу освіти"
           />
           <button
             type="button"
