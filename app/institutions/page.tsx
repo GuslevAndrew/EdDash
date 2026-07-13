@@ -129,6 +129,19 @@ function compareRegionName(first: string, second: string): number {
   return compareText(first, second);
 }
 
+function institutionOrderBy(sortKey: SortKey, direction: SortDirection): Prisma.InstitutionOrderByWithRelationInput[] {
+  if (sortKey === "region") {
+    return [{ region: { name: direction } }, { name: "asc" }];
+  }
+  if (sortKey === "foundationYear") {
+    return [{ foundationYear: direction }, { name: "asc" }];
+  }
+  if (sortKey === "ownership") {
+    return [{ ownership: direction }, { name: "asc" }];
+  }
+  return [{ name: direction }];
+}
+
 function compareInstitutionRefs(
   first: InstitutionSortRef,
   second: InstitutionSortRef,
@@ -227,10 +240,23 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
     institutionTypeCode: { in: ["1", "9"] },
     blockedAt: showBlocked ? undefined : null
   };
+  const needsFullInstitutionSort = sortKey === "students" || sortKey === "parent";
+  const institutionSelect = {
+    id: true,
+    name: true,
+    externalId: true,
+    parentExternalId: true,
+    foundationYear: true,
+    ownership: true,
+    website: true,
+    blockedAt: true,
+    region: { select: { name: true } }
+  } satisfies Prisma.InstitutionSelect;
 
   const [
     regions,
     filteredInstitutionRefs,
+    totalInstitutions,
     selectedInstitutionOptions,
     totalByLevel,
     totalRegions,
@@ -242,23 +268,16 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
     studyForms
   ] = await Promise.all([
     prisma.region.findMany({
-      where: { institutions: { some: {} } },
       orderBy: { name: "asc" }
     }),
     prisma.institution.findMany({
       where,
-      select: {
-        id: true,
-        name: true,
-        externalId: true,
-        parentExternalId: true,
-        foundationYear: true,
-        ownership: true,
-        website: true,
-        blockedAt: true,
-        region: { select: { name: true } }
-      }
+      select: institutionSelect,
+      orderBy: needsFullInstitutionSort ? undefined : institutionOrderBy(sortKey, sortDirection),
+      skip: needsFullInstitutionSort ? undefined : (page - 1) * pageSize,
+      take: needsFullInstitutionSort ? undefined : pageSize
     }),
+    prisma.institution.count({ where }),
     selectedInstitutionIds.length
       ? prisma.institution.findMany({
           where: { id: { in: selectedInstitutionIds } },
@@ -343,12 +362,13 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
       .filter((institution) => institution.externalId)
       .map((institution) => [institution.externalId ?? "", institution.name] as const)
   ]);
-  const allStudentTotals = filteredInstitutionRefs.length && latestSnapshot
+  const institutionIdsForStudentTotals = filteredInstitutionRefs.map((institution) => institution.id);
+  const allStudentTotals = institutionIdsForStudentTotals.length && latestSnapshot
     ? await prisma.studentSnapshot.groupBy({
         by: ["institutionId"],
         where: {
           snapshotDate: selectedSnapshotDate ?? latestSnapshot.snapshotDate,
-          institutionId: { in: filteredInstitutionRefs.map((institution) => institution.id) },
+          institutionId: { in: institutionIdsForStudentTotals },
           speciality: {
             canonicalFieldCode: selectedFieldCodes.length ? { in: selectedFieldCodes } : undefined,
             canonicalCode: selectedSpecialityCodes.length ? { in: selectedSpecialityCodes } : undefined
@@ -364,19 +384,39 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
   const studentsByInstitution = new Map(
     allStudentTotals.map((item) => [item.institutionId, item._sum.studentsCount ?? 0] as const)
   );
-  const sortedInstitutionRefs = [...filteredInstitutionRefs].sort((first, second) =>
-    compareInstitutionRefs(first, second, sortKey, sortDirection, parentNamesByExternalId, studentsByInstitution)
-  );
-  const total = sortedInstitutionRefs.length;
+  const sortedInstitutionRefs = needsFullInstitutionSort
+    ? [...filteredInstitutionRefs].sort((first, second) =>
+        compareInstitutionRefs(first, second, sortKey, sortDirection, parentNamesByExternalId, studentsByInstitution)
+      )
+    : filteredInstitutionRefs;
+  const total = totalInstitutions;
   const pageInstitutionIds = sortedInstitutionRefs
-    .slice((page - 1) * pageSize, page * pageSize)
+    .slice(
+      needsFullInstitutionSort ? (page - 1) * pageSize : 0,
+      needsFullInstitutionSort ? page * pageSize : sortedInstitutionRefs.length
+    )
     .map((institution) => institution.id);
   const pageInstitutionOrder = new Map(pageInstitutionIds.map((id, index) => [id, index] as const));
   const institutions = pageInstitutionIds.length
     ? (
         await prisma.institution.findMany({
           where: { id: { in: pageInstitutionIds } },
-          include: { region: true }
+          select: {
+            id: true,
+            name: true,
+            shortName: true,
+            externalId: true,
+            parentExternalId: true,
+            foundationYear: true,
+            ownership: true,
+            settlement: true,
+            address: true,
+            phone: true,
+            email: true,
+            website: true,
+            blockedAt: true,
+            region: { select: { name: true } }
+          }
         })
       ).sort((first, second) => (pageInstitutionOrder.get(first.id) ?? 0) - (pageInstitutionOrder.get(second.id) ?? 0))
     : [];
