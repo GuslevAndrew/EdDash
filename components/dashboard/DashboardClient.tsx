@@ -379,7 +379,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
       <DashboardFilters options={options} draft={draft} onDraftChange={setDraft} onApply={applyFilters} onReset={resetFilters} />
 
       {message ? <div className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-900">{message}</div> : null}
-      {loading ? <div className="mt-4 text-sm text-muted">Оновлюю дані...</div> : null}
+      {loading ? <div className="mt-4 text-sm text-muted">Оновлюю дані, зачекайте декілька секунд...</div> : null}
 
       {showSummaryCards ? (
         <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">

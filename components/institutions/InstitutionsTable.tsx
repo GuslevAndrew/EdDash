@@ -129,7 +129,7 @@ export function InstitutionsTable({
         <div>
           <h2 className="text-lg font-semibold text-ink">Таблиця закладів</h2>
           <p className="mt-1 text-sm text-muted">
-            {data ? `Знайдено: ${formatNumber(data.total)}` : "Завантажую дані таблиці..."}
+            {data ? `Знайдено: ${formatNumber(data.total)}` : "Оновлюю дані, зачекайте декілька секунд..."}
           </p>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
             Натискайте на назву стовпчика, щоб відсортувати таблицю за відповідною ознакою. За замовчуванням

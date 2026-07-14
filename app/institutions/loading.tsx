@@ -5,6 +5,9 @@ export default function InstitutionsLoading() {
     <AppShell>
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <section className="mb-6 rounded-lg border border-line bg-white p-6 shadow-soft">
+          <p className="mb-4 rounded-md border border-line bg-slate-50 px-3 py-2 text-sm text-muted">
+            Оновлюю дані, зачекайте декілька секунд...
+          </p>
           <div className="h-4 w-72 animate-pulse rounded bg-brand-100" />
           <div className="mt-4 h-9 w-64 animate-pulse rounded bg-slate-200" />
           <div className="mt-4 max-w-4xl space-y-2">
