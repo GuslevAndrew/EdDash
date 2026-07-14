@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/edbo-refresh",
+      "schedule": "0 1 1,15 * *"
+    }
+  ]
+}
