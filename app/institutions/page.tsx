@@ -281,6 +281,7 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
                 selectedValues={selectedEducationLevelNames}
                 placeholder="Оберіть освітній ступінь"
                 selectedLabel="Обрано освітніх ступенів"
+                disableSearch
               />
               <SearchableMultiSelectField
                 label="Основа вступу"
@@ -292,6 +293,7 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
                 selectedValues={selectedEntryBaseIds.map(String)}
                 placeholder="Оберіть основу вступу"
                 selectedLabel="Обрано основ вступу"
+                disableSearch
               />
               <SearchableMultiSelectField
                 label="Форма навчання"
@@ -303,6 +305,7 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
                 selectedValues={selectedStudyFormIds.map(String)}
                 placeholder="Оберіть форму навчання"
                 selectedLabel="Обрано форм навчання"
+                disableSearch
               />
             </div>
 
@@ -327,6 +330,11 @@ export default async function InstitutionsPage({ searchParams }: PageProps) {
                 </Link>
               </div>
             </div>
+            <p className="rounded-md border border-line bg-slate-50 px-3 py-2 text-xs leading-5 text-muted">
+              <span className="italic">Примітка:</span> для узгодженого відображення даних історичні записи з рівнем «спеціаліст» віднесено до категорії
+              «магістр», а записи з рівнями «молодший бакалавр» і «молодший спеціаліст» — до категорії «фаховий молодший
+              бакалавр».
+            </p>
           </form>
         </section>
 

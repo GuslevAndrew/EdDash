@@ -226,6 +226,7 @@ export function DashboardFilters({
           selectedValues={draft.regionIds}
           onChange={changeRegions}
           onReset={() => changeRegions([])}
+          disableSearch
         />
         <div className="md:col-span-2">
           <SearchableMultiSelect
@@ -292,6 +293,7 @@ export function DashboardFilters({
           selectedValues={draft.educationLevelNames}
           onChange={(educationLevelNames) => onDraftChange({ ...draft, educationLevelNames })}
           onReset={() => onDraftChange({ ...draft, educationLevelNames: [] })}
+          disableSearch
         />
         <SearchableMultiSelect
           label="Основа вступу"
@@ -302,6 +304,7 @@ export function DashboardFilters({
           selectedValues={draft.entryBaseIds}
           onChange={(entryBaseIds) => onDraftChange({ ...draft, entryBaseIds })}
           onReset={() => onDraftChange({ ...draft, entryBaseIds: [] })}
+          disableSearch
         />
         {isStudentsDataset && canUseStudyForms ? (
           <SearchableMultiSelect
@@ -313,6 +316,7 @@ export function DashboardFilters({
             selectedValues={draft.studyFormIds}
             onChange={(studyFormIds) => onDraftChange({ ...draft, studyFormIds })}
             onReset={() => onDraftChange({ ...draft, studyFormIds: [] })}
+            disableSearch
           />
         ) : isStudentsDataset ? (
           <DisabledFilterNotice
