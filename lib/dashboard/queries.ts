@@ -19,6 +19,7 @@ type DynamicSeries = {
   name: string;
   points: Array<{ date: string; value: number }>;
 };
+type DynamicsBreakdownKey = "institutions" | "regions" | "fields" | "specialities" | "educationLevels" | "studyForms";
 type EducationLevelBreakdown = {
   title: string;
   description?: string;
@@ -58,16 +59,32 @@ async function getCompleteSnapshotDates(): Promise<Date[]> {
 }
 
 export async function getFilterOptions() {
-  const [dates, datesWithStudyForms, years, regions, institutions, specialities, educationLevels, entryBases, studyForms] = await Promise.all([
-    getCompleteSnapshotDates(),
-    prisma.studentSnapshot
-      .groupBy({
-        by: ["snapshotDate"],
-        where: { studyForm: { code: { not: "total" } } },
-        _count: { _all: true },
-        orderBy: { snapshotDate: "desc" }
-      })
-      .then((items) => items.filter((item) => item._count._all > 0).map((item) => item.snapshotDate)),
+  const [
+    dateRows,
+    datesWithStudyFormRows,
+    years,
+    regions,
+    institutions,
+    specialities,
+    educationLevels,
+    entryBases,
+    studyForms
+  ] = await prisma.$transaction([
+    prisma.studentSnapshot.groupBy({
+      by: ["snapshotDate"],
+      where: {
+        studyForm: { code: "total" },
+        institution: { blockedAt: null }
+      },
+      _count: { _all: true },
+      orderBy: { snapshotDate: "desc" }
+    }),
+    prisma.studentSnapshot.groupBy({
+      by: ["snapshotDate"],
+      where: { studyForm: { code: { not: "total" } } },
+      _count: { _all: true },
+      orderBy: { snapshotDate: "desc" }
+    }),
     prisma.yearlyOutcome.findMany({
       distinct: ["year"],
       select: { year: true },
@@ -88,6 +105,12 @@ export async function getFilterOptions() {
     prisma.entryBase.findMany({ orderBy: { name: "asc" } }),
     prisma.studyForm.findMany({ where: { code: { not: "total" } }, orderBy: { name: "asc" } })
   ]);
+  const dates = dateRows
+    .filter((item) => (typeof item._count === "object" ? item._count._all ?? 0 : 0) >= MIN_COMPLETE_SNAPSHOT_ROWS)
+    .map((item) => item.snapshotDate);
+  const datesWithStudyForms = datesWithStudyFormRows
+    .filter((item) => (typeof item._count === "object" ? item._count._all ?? 0 : 0) > 0)
+    .map((item) => item.snapshotDate);
 
   return {
     dates: dates.map((date) => date.toISOString()),
@@ -256,6 +279,36 @@ async function yearlyTotalsByRelationAcrossYears(
   });
 
   return values.sort((first, second) => second.value - first.value).slice(0, take);
+}
+
+async function yearlyGrandTotalAcrossYears(where: Prisma.YearlyOutcomeWhereInput, years: number[]): Promise<InstitutionDateTotal[]> {
+  if (years.length <= 1) {
+    const total = await prisma.yearlyOutcome.aggregate({
+      where: {
+        ...where,
+        year: years[0] ?? where.year
+      },
+      _sum: { personsCount: true }
+    });
+
+    return [{ name: "Разом", value: total._sum.personsCount ?? 0 }];
+  }
+
+  const grouped = await prisma.yearlyOutcome.groupBy({
+    by: ["year"],
+    where: {
+      ...where,
+      year: { in: years }
+    },
+    _sum: { personsCount: true }
+  });
+  const valuesByYear = new Map(grouped.map((item) => [String(item.year), item._sum.personsCount ?? 0]));
+  const series = years.map((year) => ({
+    label: String(year),
+    value: valuesByYear.get(String(year)) ?? 0
+  }));
+
+  return [{ name: "Разом", value: series[0]?.value ?? 0, series }];
 }
 
 async function yearlyTotalsByRegionAcrossYears(
@@ -469,6 +522,44 @@ async function totalsByInstitutionAcrossSnapshotDates(
       };
     })
     .sort((first, second) => second.value - first.value);
+}
+
+async function grandTotalAcrossSnapshotDates(
+  where: Prisma.StudentSnapshotWhereInput,
+  snapshotDates: string[]
+): Promise<InstitutionDateTotal[]> {
+  const selectedDates = [...new Set(snapshotDates)]
+    .map((date) => new Date(date))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .sort((first, second) => second.getTime() - first.getTime());
+
+  if (selectedDates.length <= 1) {
+    const total = await prisma.studentSnapshot.aggregate({
+      where: {
+        ...where,
+        snapshotDate: selectedDates[0] ?? where.snapshotDate
+      },
+      _sum: { studentsCount: true }
+    });
+
+    return [{ name: "Разом", value: total._sum.studentsCount ?? 0 }];
+  }
+
+  const grouped = await prisma.studentSnapshot.groupBy({
+    by: ["snapshotDate"],
+    where: {
+      ...where,
+      snapshotDate: { in: selectedDates }
+    },
+    _sum: { studentsCount: true }
+  });
+  const valuesByDate = new Map(grouped.map((item) => [item.snapshotDate.toISOString(), item._sum.studentsCount ?? 0]));
+  const series = selectedDates.map((date) => ({
+    label: date.toISOString(),
+    value: valuesByDate.get(date.toISOString()) ?? 0
+  }));
+
+  return [{ name: "Разом", value: series[0]?.value ?? 0, series }];
 }
 
 function getSelectedSnapshotDates(filters: Partial<DashboardFiltersInput>): Date[] {
@@ -1244,56 +1335,78 @@ function buildYearlyDynamicSeries<T extends string | number>(
     }));
 }
 
-async function getYearlyOutcomeDynamicsBreakdowns(where: Prisma.YearlyOutcomeWhereInput, years: number[]) {
+async function getYearlyOutcomeDynamicsBreakdowns(
+  where: Prisma.YearlyOutcomeWhereInput,
+  years: number[],
+  breakdowns: DynamicsBreakdownKey[] = ["institutions", "regions", "fields", "specialities", "educationLevels"]
+) {
+  const requested = new Set(breakdowns);
   const dynamicsWhere = { ...where, year: { in: years } };
+  const needsSpecialities = requested.has("fields") || requested.has("specialities");
   const [institutionGrouped, regionGrouped, specialityGrouped, educationLevelGrouped] = await Promise.all([
-    prisma.yearlyOutcome.groupBy({
-      by: ["institutionId", "year"],
-      where: dynamicsWhere,
-      _sum: { personsCount: true }
-    }),
-    prisma.yearlyOutcome.groupBy({
-      by: ["regionId", "year"],
-      where: dynamicsWhere,
-      _sum: { personsCount: true }
-    }),
-    prisma.yearlyOutcome.groupBy({
-      by: ["specialityId", "year"],
-      where: dynamicsWhere,
-      _sum: { personsCount: true }
-    }),
-    prisma.yearlyOutcome.groupBy({
-      by: ["educationLevelId", "year"],
-      where: dynamicsWhere,
-      _sum: { personsCount: true }
-    })
+    requested.has("institutions")
+      ? prisma.yearlyOutcome.groupBy({
+          by: ["institutionId", "year"],
+          where: dynamicsWhere,
+          _sum: { personsCount: true }
+        })
+      : Promise.resolve([]),
+    requested.has("regions")
+      ? prisma.yearlyOutcome.groupBy({
+          by: ["regionId", "year"],
+          where: dynamicsWhere,
+          _sum: { personsCount: true }
+        })
+      : Promise.resolve([]),
+    needsSpecialities
+      ? prisma.yearlyOutcome.groupBy({
+          by: ["specialityId", "year"],
+          where: dynamicsWhere,
+          _sum: { personsCount: true }
+        })
+      : Promise.resolve([]),
+    requested.has("educationLevels")
+      ? prisma.yearlyOutcome.groupBy({
+          by: ["educationLevelId", "year"],
+          where: dynamicsWhere,
+          _sum: { personsCount: true }
+        })
+      : Promise.resolve([])
   ]);
 
   const [institutions, regions, specialities, educationLevels] = await Promise.all([
-    prisma.institution.findMany({
-      where: { id: { in: [...new Set(institutionGrouped.map((item) => item.institutionId))] } },
-      select: { id: true, name: true }
-    }),
-    prisma.region.findMany({
-      where: { id: { in: [...new Set(regionGrouped.map((item) => item.regionId))] } },
-      select: { id: true, name: true }
-    }),
-    prisma.speciality.findMany({
-      where: { id: { in: [...new Set(specialityGrouped.map((item) => item.specialityId))] } },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        canonicalCode: true,
-        canonicalName: true,
-        canonicalFieldCode: true,
-        canonicalFieldName: true
-      }
-    }),
-    prisma.educationLevel.findMany({
-      where: { id: { in: [...new Set(educationLevelGrouped.map((item) => item.educationLevelId))] } },
-      select: { id: true, name: true }
-    })
+    institutionGrouped.length
+      ? prisma.institution.findMany({
+          where: { id: { in: [...new Set(institutionGrouped.map((item) => item.institutionId))] } },
+          select: { id: true, name: true }
+        })
+      : Promise.resolve([]),
+    regionGrouped.length
+      ? prisma.region.findMany({
+          where: { id: { in: [...new Set(regionGrouped.map((item) => item.regionId))] } },
+          select: { id: true, name: true }
+        })
+      : Promise.resolve([]),
+    specialityGrouped.length
+      ? prisma.speciality.findMany({
+          where: { id: { in: [...new Set(specialityGrouped.map((item) => item.specialityId))] } },
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            canonicalCode: true,
+            canonicalName: true,
+            canonicalFieldCode: true,
+            canonicalFieldName: true
+          }
+        })
+      : Promise.resolve([]),
+    educationLevelGrouped.length
+      ? prisma.educationLevel.findMany({
+          where: { id: { in: [...new Set(educationLevelGrouped.map((item) => item.educationLevelId))] } },
+          select: { id: true, name: true }
+        })
+      : Promise.resolve([])
   ]);
 
   const institutionNames = new Map(institutions.map((item) => [item.id, item.name]));
@@ -1316,96 +1429,128 @@ async function getYearlyOutcomeDynamicsBreakdowns(where: Prisma.YearlyOutcomeWhe
     specialityRows.push({ key: specialityCode, year: item.year, value: item._sum.personsCount ?? 0 });
   }
 
-  return {
-    institutions: buildYearlyDynamicSeries(
+  const result: Partial<Record<DynamicsBreakdownKey, DynamicSeries[]>> = {};
+  if (requested.has("institutions")) {
+    result.institutions = buildYearlyDynamicSeries(
       institutionGrouped.map((item) => ({ key: item.institutionId, year: item.year, value: item._sum.personsCount ?? 0 })),
       institutionNames,
       years,
       8,
       "institution"
-    ),
-    regions: buildYearlyDynamicSeries(
+    );
+  }
+  if (requested.has("regions")) {
+    result.regions = buildYearlyDynamicSeries(
       regionGrouped.map((item) => ({ key: item.regionId, year: item.year, value: item._sum.personsCount ?? 0 })),
       regionNames,
       years,
       12,
       "region"
-    ),
-    fields: buildYearlyDynamicSeries(fieldRows, fieldNames, years, 12, "field"),
-    specialities: buildYearlyDynamicSeries(specialityRows, specialityNames, years, 8, "speciality"),
-    educationLevels: buildYearlyDynamicSeries(
+    );
+  }
+  if (requested.has("fields")) result.fields = buildYearlyDynamicSeries(fieldRows, fieldNames, years, 12, "field");
+  if (requested.has("specialities")) result.specialities = buildYearlyDynamicSeries(specialityRows, specialityNames, years, 8, "speciality");
+  if (requested.has("educationLevels")) {
+    result.educationLevels = buildYearlyDynamicSeries(
       educationLevelGrouped.map((item) => ({ key: item.educationLevelId, year: item.year, value: item._sum.personsCount ?? 0 })),
       educationLevelNames,
       years,
       8,
       "education-level"
-    )
-  };
+    );
+  }
+  return result;
 }
 
-async function getStudentDynamicsBreakdowns(where: Prisma.StudentSnapshotWhereInput, dates: Date[]) {
+async function getStudentDynamicsBreakdowns(
+  where: Prisma.StudentSnapshotWhereInput,
+  dates: Date[],
+  breakdowns: DynamicsBreakdownKey[] = ["institutions", "regions", "fields", "specialities", "educationLevels", "studyForms"]
+) {
+  const requested = new Set(breakdowns);
   const dynamicsWhere = { ...where, snapshotDate: { in: dates } };
   const studyFormDynamicsWhere: Prisma.StudentSnapshotWhereInput = {
     ...dynamicsWhere,
     studyForm: { code: { not: "total" } }
   };
+  const needsSpecialities = requested.has("fields") || requested.has("specialities");
   const [institutionGrouped, regionGrouped, specialityGrouped, educationLevelGrouped, studyFormGrouped] = await Promise.all([
-    prisma.studentSnapshot.groupBy({
-      by: ["institutionId", "snapshotDate"],
-      where: dynamicsWhere,
-      _sum: { studentsCount: true }
-    }),
-    prisma.studentSnapshot.groupBy({
-      by: ["regionId", "snapshotDate"],
-      where: dynamicsWhere,
-      _sum: { studentsCount: true }
-    }),
-    prisma.studentSnapshot.groupBy({
-      by: ["specialityId", "snapshotDate"],
-      where: dynamicsWhere,
-      _sum: { studentsCount: true }
-    }),
-    prisma.studentSnapshot.groupBy({
-      by: ["educationLevelId", "snapshotDate"],
-      where: dynamicsWhere,
-      _sum: { studentsCount: true }
-    }),
-    prisma.studentSnapshot.groupBy({
-      by: ["studyFormId", "snapshotDate"],
-      where: studyFormDynamicsWhere,
-      _sum: { studentsCount: true }
-    })
+    requested.has("institutions")
+      ? prisma.studentSnapshot.groupBy({
+          by: ["institutionId", "snapshotDate"],
+          where: dynamicsWhere,
+          _sum: { studentsCount: true }
+        })
+      : Promise.resolve([]),
+    requested.has("regions")
+      ? prisma.studentSnapshot.groupBy({
+          by: ["regionId", "snapshotDate"],
+          where: dynamicsWhere,
+          _sum: { studentsCount: true }
+        })
+      : Promise.resolve([]),
+    needsSpecialities
+      ? prisma.studentSnapshot.groupBy({
+          by: ["specialityId", "snapshotDate"],
+          where: dynamicsWhere,
+          _sum: { studentsCount: true }
+        })
+      : Promise.resolve([]),
+    requested.has("educationLevels")
+      ? prisma.studentSnapshot.groupBy({
+          by: ["educationLevelId", "snapshotDate"],
+          where: dynamicsWhere,
+          _sum: { studentsCount: true }
+        })
+      : Promise.resolve([]),
+    requested.has("studyForms")
+      ? prisma.studentSnapshot.groupBy({
+          by: ["studyFormId", "snapshotDate"],
+          where: studyFormDynamicsWhere,
+          _sum: { studentsCount: true }
+        })
+      : Promise.resolve([])
   ]);
 
   const [institutions, regions, specialities, educationLevels, studyForms] = await Promise.all([
-    prisma.institution.findMany({
-      where: { id: { in: [...new Set(institutionGrouped.map((item) => item.institutionId))] } },
-      select: { id: true, name: true }
-    }),
-    prisma.region.findMany({
-      where: { id: { in: [...new Set(regionGrouped.map((item) => item.regionId))] } },
-      select: { id: true, name: true }
-    }),
-    prisma.speciality.findMany({
-      where: { id: { in: [...new Set(specialityGrouped.map((item) => item.specialityId))] } },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        canonicalCode: true,
-        canonicalName: true,
-        canonicalFieldCode: true,
-        canonicalFieldName: true
-      }
-    }),
-    prisma.educationLevel.findMany({
-      where: { id: { in: [...new Set(educationLevelGrouped.map((item) => item.educationLevelId))] } },
-      select: { id: true, name: true }
-    }),
-    prisma.studyForm.findMany({
-      where: { id: { in: [...new Set(studyFormGrouped.map((item) => item.studyFormId).filter((id): id is number => id !== null))] } },
-      select: { id: true, name: true }
-    })
+    institutionGrouped.length
+      ? prisma.institution.findMany({
+          where: { id: { in: [...new Set(institutionGrouped.map((item) => item.institutionId))] } },
+          select: { id: true, name: true }
+        })
+      : Promise.resolve([]),
+    regionGrouped.length
+      ? prisma.region.findMany({
+          where: { id: { in: [...new Set(regionGrouped.map((item) => item.regionId))] } },
+          select: { id: true, name: true }
+        })
+      : Promise.resolve([]),
+    specialityGrouped.length
+      ? prisma.speciality.findMany({
+          where: { id: { in: [...new Set(specialityGrouped.map((item) => item.specialityId))] } },
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            canonicalCode: true,
+            canonicalName: true,
+            canonicalFieldCode: true,
+            canonicalFieldName: true
+          }
+        })
+      : Promise.resolve([]),
+    educationLevelGrouped.length
+      ? prisma.educationLevel.findMany({
+          where: { id: { in: [...new Set(educationLevelGrouped.map((item) => item.educationLevelId))] } },
+          select: { id: true, name: true }
+        })
+      : Promise.resolve([]),
+    studyFormGrouped.length
+      ? prisma.studyForm.findMany({
+          where: { id: { in: [...new Set(studyFormGrouped.map((item) => item.studyFormId).filter((id): id is number => id !== null))] } },
+          select: { id: true, name: true }
+        })
+      : Promise.resolve([])
   ]);
 
   const institutionNames = new Map(institutions.map((item) => [item.id, item.name]));
@@ -1429,40 +1574,51 @@ async function getStudentDynamicsBreakdowns(where: Prisma.StudentSnapshotWhereIn
     specialityRows.push({ key: specialityCode, snapshotDate: item.snapshotDate, value: item._sum.studentsCount ?? 0 });
   }
 
-  return {
-    institutions: buildDynamicSeries(
+  const result: Partial<Record<DynamicsBreakdownKey, DynamicSeries[]>> = {};
+  if (requested.has("institutions")) {
+    result.institutions = buildDynamicSeries(
       institutionGrouped.map((item) => ({ key: item.institutionId, snapshotDate: item.snapshotDate, value: item._sum.studentsCount ?? 0 })),
       institutionNames,
       dates,
       8,
       "institution"
-    ),
-    regions: buildDynamicSeries(
+    );
+  }
+  if (requested.has("regions")) {
+    result.regions = buildDynamicSeries(
       regionGrouped.map((item) => ({ key: item.regionId, snapshotDate: item.snapshotDate, value: item._sum.studentsCount ?? 0 })),
       regionNames,
       dates,
       12,
       "region"
-    ),
-    fields: buildDynamicSeries(fieldRows, fieldNames, dates, 12, "field"),
-    specialities: buildDynamicSeries(specialityRows, specialityNames, dates, 8, "speciality"),
-    educationLevels: buildDynamicSeries(
+    );
+  }
+  if (requested.has("fields")) result.fields = buildDynamicSeries(fieldRows, fieldNames, dates, 12, "field");
+  if (requested.has("specialities")) result.specialities = buildDynamicSeries(specialityRows, specialityNames, dates, 8, "speciality");
+  if (requested.has("educationLevels")) {
+    result.educationLevels = buildDynamicSeries(
       educationLevelGrouped.map((item) => ({ key: item.educationLevelId, snapshotDate: item.snapshotDate, value: item._sum.studentsCount ?? 0 })),
       educationLevelNames,
       dates,
       8,
       "education-level"
-    ),
-    studyForms: buildDynamicSeries(
+    );
+  }
+  if (requested.has("studyForms")) {
+    result.studyForms = buildDynamicSeries(
       studyFormGrouped
-        .filter((item): item is typeof item & { studyFormId: number } => item.studyFormId !== null)
-        .map((item) => ({ key: item.studyFormId, snapshotDate: item.snapshotDate, value: item._sum.studentsCount ?? 0 })),
+        .flatMap((item) =>
+          item.studyFormId === null
+            ? []
+            : [{ key: item.studyFormId, snapshotDate: item.snapshotDate, value: item._sum.studentsCount ?? 0 }]
+        ),
       studyFormNames,
       dates,
       8,
       "study-form"
-    )
-  };
+    );
+  }
+  return result;
 }
 
 export async function getDashboardSummary(filters: Partial<DashboardFiltersInput>) {
@@ -1589,15 +1745,13 @@ export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>
       orderBy: { year: "asc" }
     });
 
-    const dynamicsYears = dynamics.map((item) => item.year);
-    const [topInstitutions, topInstitutionsTotal, regions, fields, educationLevels, educationLevelBreakdowns, dynamicsBreakdowns] = await Promise.all([
+    const [topInstitutions, topInstitutionsTotal, regions, fields, educationLevels, educationLevelBreakdowns] = await Promise.all([
       yearlyTotalsByRelationAcrossYears("institutionId", institutionChartWhere, selectedYears),
-      yearlyTotalsByRelationAcrossYears("institutionId", institutionTotalWhere, selectedYears),
+      yearlyGrandTotalAcrossYears(institutionTotalWhere, selectedYears),
       yearlyTotalsByRegionAcrossYears(regionChartWhere, regionSelectedInstitutionWhere, selectedYears, selectedRegionIds),
       yearlyTotalsByFieldWithSelectedSpecialities(fieldChartWhere, fieldSelectedSpecialityWhere, selectedFieldCodes, selectedYears),
       yearlyTotalsByEducationLevel(where, 10),
-      getYearlyOutcomeEducationLevelBreakdowns(filters),
-      getYearlyOutcomeDynamicsBreakdowns({ ...where, year: undefined }, dynamicsYears)
+      getYearlyOutcomeEducationLevelBreakdowns(filters)
     ]);
 
     return {
@@ -1612,7 +1766,7 @@ export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>
         name: String(item.year),
         value: item._sum.personsCount ?? 0
       })),
-      dynamicsBreakdowns
+      dynamicsBreakdowns: {}
     };
   }
 
@@ -1680,14 +1834,13 @@ export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>
   const selectedSnapshotDates = getSelectedSnapshotDates(filters);
   const selectedRegionIds = filters.regionIds?.length ? filters.regionIds : filters.regionId ? [filters.regionId] : [];
   const selectedFieldCodes = filters.fieldCodes?.length ? filters.fieldCodes : filters.fieldCode ? [filters.fieldCode] : [];
-  const [topInstitutions, topInstitutionsTotal, regions, fields, educationLevels, educationLevelBreakdowns, dynamicsBreakdowns] = await Promise.all([
+  const [topInstitutions, topInstitutionsTotal, regions, fields, educationLevels, educationLevelBreakdowns] = await Promise.all([
     totalsByInstitutionAcrossSnapshotDates(institutionChartWhere, institutionSnapshotDates),
-    totalsByInstitutionAcrossSnapshotDates(institutionTotalWhere, institutionSnapshotDates),
+    grandTotalAcrossSnapshotDates(institutionTotalWhere, institutionSnapshotDates),
     totalsByRegionAcrossSnapshotDates(regionChartWhere, regionSelectedInstitutionWhere, selectedSnapshotDates, selectedRegionIds),
     totalsByFieldWithSelectedSpecialities(fieldChartWhere, fieldSelectedSpecialityWhere, selectedFieldCodes, selectedSnapshotDates),
     totalsByEducationLevel(where, 10),
-    getStudentEducationLevelBreakdowns(filters),
-    getStudentDynamicsBreakdowns({ ...where, snapshotDate: undefined }, completeSnapshotDates)
+    getStudentEducationLevelBreakdowns(filters)
   ]);
 
   return {
@@ -1702,8 +1855,39 @@ export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>
       name: item.snapshotDate.toISOString(),
       value: item._sum.studentsCount ?? 0
     })),
-    dynamicsBreakdowns
+    dynamicsBreakdowns: {}
   };
+}
+
+export async function getDashboardDynamicsBreakdowns(
+  filters: Partial<DashboardFiltersInput>,
+  breakdowns: DynamicsBreakdownKey[]
+) {
+  const uniqueBreakdowns = [...new Set(breakdowns)];
+  if (!uniqueBreakdowns.length) return {};
+
+  if (filters.datasetType === "entrants" || filters.datasetType === "graduates") {
+    const supportedBreakdowns = uniqueBreakdowns.filter((breakdown) => breakdown !== "studyForms");
+    if (!supportedBreakdowns.length) return {};
+
+    const where = buildYearlyOutcomeWhere(filters);
+    const dynamics = await prisma.yearlyOutcome.groupBy({
+      by: ["year"],
+      where: { ...where, year: undefined },
+      _sum: { personsCount: true },
+      orderBy: { year: "asc" }
+    });
+
+    return getYearlyOutcomeDynamicsBreakdowns(
+      { ...where, year: undefined },
+      dynamics.map((item) => item.year),
+      supportedBreakdowns
+    );
+  }
+
+  const where = buildSnapshotWhere(filters);
+  const completeSnapshotDates = await getCompleteSnapshotDates();
+  return getStudentDynamicsBreakdowns({ ...where, snapshotDate: undefined }, completeSnapshotDates, uniqueBreakdowns);
 }
 
 export async function getTableData(filters: DashboardFiltersInput) {

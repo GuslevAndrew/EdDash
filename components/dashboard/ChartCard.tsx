@@ -449,7 +449,8 @@ export function LineChartCard({
   onDateSelectionChange,
   breakdownOptions = [],
   selectedBreakdowns = [],
-  onBreakdownToggle
+  onBreakdownToggle,
+  isBreakdownLoading = false
 }: {
   title: string;
   data: ChartDatum[];
@@ -460,6 +461,7 @@ export function LineChartCard({
   breakdownOptions?: DynamicsBreakdownOption[];
   selectedBreakdowns?: DynamicsBreakdownValue[];
   onBreakdownToggle?: (value: DynamicsBreakdownValue, checked: boolean) => void;
+  isBreakdownLoading?: boolean;
 }) {
   const [hoveredLineKey, setHoveredLineKey] = useState<string | null>(null);
   const prepared = data.map((item) => ({ ...item, label: /^\d{4}$/.test(item.name) ? item.name : formatDate(item.name) }));
@@ -579,6 +581,9 @@ export function LineChartCard({
                 <p className="mt-2 text-xs text-muted">
                   Додано ліній: {formatNumber(activeSeries.length)}.
                 </p>
+              ) : null}
+              {isBreakdownLoading ? (
+                <p className="mt-2 text-xs text-muted">Оновлюю деталізацію динаміки, зачекайте кілька секунд...</p>
               ) : null}
             </div>
           ) : null}

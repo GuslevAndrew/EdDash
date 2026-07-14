@@ -104,6 +104,8 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
   const [message, setMessage] = useState<string | null>(null);
   const [dynamicDateValues, setDynamicDateValues] = useState<string[]>([]);
   const [dynamicBreakdowns, setDynamicBreakdowns] = useState<DynamicsBreakdownValue[]>([]);
+  const [loadedDynamicsBreakdowns, setLoadedDynamicsBreakdowns] = useState<Partial<Record<DynamicsBreakdownValue, DynamicsSeries[]>>>({});
+  const [isDynamicsBreakdownLoading, setIsDynamicsBreakdownLoading] = useState(false);
   const isStudentsDataset = filters.datasetType === "students";
   const totalLabel =
     filters.datasetType === "entrants"
@@ -269,6 +271,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
         if (!active) return;
         setSummary(summaryData);
         setCharts({ ...defaultCharts, ...chartsData });
+        setLoadedDynamicsBreakdowns({});
       } catch {
         if (active) setMessage("Не вдалося оновити дашборд. Дані залишилися без змін.");
       } finally {
@@ -280,6 +283,35 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
       active = false;
     };
   }, [filters.datasetType, params]);
+
+  useEffect(() => {
+    if (!dynamicBreakdowns.length) return;
+    const missingBreakdowns = dynamicBreakdowns.filter((breakdown) => !loadedDynamicsBreakdowns[breakdown]);
+    if (!missingBreakdowns.length) return;
+
+    const controller = new AbortController();
+    const search = new URLSearchParams(params);
+    for (const breakdown of missingBreakdowns) search.append("breakdown", breakdown);
+
+    setIsDynamicsBreakdownLoading(true);
+    fetch(`/api/dashboard/dynamics-breakdowns?${search.toString()}`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("Dynamics breakdown request failed");
+        return response.json() as Promise<Partial<Record<DynamicsBreakdownValue, DynamicsSeries[]>>>;
+      })
+      .then((data) => {
+        setLoadedDynamicsBreakdowns((current) => ({ ...current, ...data }));
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setMessage("Не вдалося довантажити вибрану деталізацію динаміки. Спробуйте ще раз.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsDynamicsBreakdownLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [dynamicBreakdowns, loadedDynamicsBreakdowns, params]);
 
   function applyFilters() {
     setFilters(draft);
@@ -419,12 +451,13 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
           title={dynamicsChartTitle}
           data={visibleDynamics}
           allData={charts.dynamics}
-          dynamicsSeries={charts.dynamicsBreakdowns}
+          dynamicsSeries={loadedDynamicsBreakdowns}
           selectedDateValues={dynamicDateValues}
           onDateSelectionChange={changeDynamicDates}
           breakdownOptions={dynamicsBreakdownOptions}
           selectedBreakdowns={dynamicBreakdowns}
           onBreakdownToggle={toggleDynamicBreakdown}
+          isBreakdownLoading={isDynamicsBreakdownLoading}
         />
         <EducationLevelPieGrid
           title={educationLevelTitle}
