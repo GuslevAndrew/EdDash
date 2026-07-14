@@ -2,8 +2,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import { getFilterOptions } from "@/lib/dashboard/queries";
 
-export const dynamic = "force-dynamic";
-
 export default async function DashboardPage() {
   const filterOptions = await getFilterOptions();
 
