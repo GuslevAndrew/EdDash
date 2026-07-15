@@ -556,7 +556,7 @@ export function LineChartCard({
               options={dateOptions}
               selectedValues={selectedDateValues ?? dateOptions.map((option) => option.value)}
               onChange={onDateSelectionChange}
-              onReset={() => onDateSelectionChange?.(dateOptions.map((option) => option.value))}
+              onReset={() => onDateSelectionChange?.([])}
               disableSearch
               showResetButton
             />
@@ -713,7 +713,7 @@ function MiniMultiSelect({
             <button
               type="button"
               onClick={resetSelection}
-              disabled={selectedOptions.length === options.length}
+              disabled={!selectedOptions.length}
               className="mb-2 w-full rounded-md border border-line px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
             >
               Скинути
