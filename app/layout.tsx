@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   publisher: "EdDash",
   openGraph: {
     title: "EdDash",
-    description: "Вся освіта як на дошці: аналітика освіти після школи на основі відкритих офіційних даних.",
+    description: "Освіта як на дошці: аналітика освіти після школи на основі відкритих офіційних даних.",
     url: "https://eddash.info",
     siteName: "EdDash",
     locale: "uk_UA",

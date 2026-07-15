@@ -35,7 +35,7 @@ export default async function HomePage() {
           <div className="flex flex-col justify-center">
             <p className="text-sm font-semibold uppercase tracking-wide text-brand-700">Сервіс використовує відкриті офіційні дані</p>
             <h1 className="mt-4 max-w-3xl text-4xl font-bold leading-tight text-ink sm:text-5xl">
-              Вся освіта як на дошці
+              Освіта як на дошці
             </h1>
             <p className="mt-5 max-w-2xl text-xl font-semibold leading-8 text-slate-800">
               Пошук, перевірка та аналіз освіти в одному дашборді.
