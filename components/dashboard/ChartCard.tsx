@@ -809,7 +809,7 @@ export function EducationLevelPieGrid({ title, description, groups }: { title: s
           <div key={group.title} className="rounded-md border border-line bg-slate-50/60 p-4">
             <div>
               <h3 className="text-sm font-semibold text-ink">{group.title}</h3>
-              {group.description ? <p className="mt-1 text-xs leading-5 text-muted">{group.description}</p> : null}
+              {group.data.length && group.description ? <p className="mt-1 text-xs leading-5 text-muted">{group.description}</p> : null}
             </div>
             {group.data.length ? (
               <>
@@ -848,8 +848,10 @@ export function EducationLevelPieGrid({ title, description, groups }: { title: s
                 </div>
               </>
             ) : (
-              <div className="mt-3 rounded-md bg-white p-4">
-                <EmptyState title="Немає даних" />
+              <div className="mt-3 flex min-h-48 items-center justify-center rounded-xl border border-dashed border-line bg-white px-6 py-8 text-center">
+                <p className="max-w-xs text-sm font-medium leading-6 text-slate-700">
+                  {group.description ?? "Оберіть відповідний фільтр, щоб побачити розподіл."}
+                </p>
               </div>
             )}
           </div>
