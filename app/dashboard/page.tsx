@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/AppShell";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
-import { getFilterOptions } from "@/lib/dashboard/queries";
 
 export const metadata: Metadata = {
   title: "Дашборд",
@@ -12,12 +11,10 @@ export const metadata: Metadata = {
   }
 };
 
-export default async function DashboardPage() {
-  const filterOptions = await getFilterOptions();
-
+export default function DashboardPage() {
   return (
     <AppShell>
-      <DashboardClient initialOptions={JSON.parse(JSON.stringify(filterOptions))} />
+      <DashboardClient />
     </AppShell>
   );
 }

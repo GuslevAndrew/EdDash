@@ -6,6 +6,9 @@ import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical
 
 const defaultPageSize = 25;
 const maxPageSize = 250;
+const cacheHeaders = {
+  "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400"
+};
 const sortKeys = ["institution", "parent", "region", "students", "foundationYear", "ownership"] as const;
 const sortDirections = ["asc", "desc"] as const;
 
@@ -302,5 +305,5 @@ export async function GET(request: Request) {
         email: institution.email
       };
     })
-  });
+  }, { headers: cacheHeaders });
 }

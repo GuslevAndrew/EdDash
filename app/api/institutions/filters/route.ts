@@ -3,7 +3,9 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical";
 
-export const dynamic = "force-dynamic";
+const cacheHeaders = {
+  "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400"
+};
 
 function getNumberParams(searchParams: URLSearchParams, key: string): number[] {
   return searchParams
@@ -119,5 +121,5 @@ export async function GET(request: Request) {
       value: String(studyForm.id),
       label: studyForm.name
     }))
-  });
+  }, { headers: cacheHeaders });
 }

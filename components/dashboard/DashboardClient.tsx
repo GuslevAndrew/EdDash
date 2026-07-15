@@ -13,6 +13,7 @@ import {
 } from "./ChartCard";
 import { DashboardFilters, emptyFilters, type DashboardFilterState, type FilterOptions } from "./DashboardFilters";
 import { DeltaStatCard, StatCard } from "./StatCard";
+import { LoadingNotice } from "@/components/ui/LoadingNotice";
 import { formatDate } from "@/lib/utils/format";
 
 type Summary = {
@@ -33,14 +34,6 @@ type Charts = {
   educationLevelBreakdowns: PieChartGroup[];
   dynamics: ChartDatum[];
   dynamicsBreakdowns?: Partial<Record<DynamicsBreakdownValue, DynamicsSeries[]>>;
-};
-
-const defaultSummary: Summary = {
-  totalStudents: 0,
-  institutionsCount: 0,
-  specialitiesCount: 0,
-  regionsCount: 0,
-  previousDelta: null
 };
 
 const defaultCharts: Charts = {
@@ -98,9 +91,10 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
   const [options, setOptions] = useState<FilterOptions | null>(initialOptions);
   const [draft, setDraft] = useState<DashboardFilterState>(initialFilters);
   const [filters, setFilters] = useState<DashboardFilterState>(initialFilters);
-  const [summary, setSummary] = useState<Summary>(defaultSummary);
+  const [summary, setSummary] = useState<Summary | null>(null);
   const [charts, setCharts] = useState<Charts>(defaultCharts);
-  const [loading, setLoading] = useState(true);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(true);
+  const [isChartsLoading, setIsChartsLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [dynamicDateValues, setDynamicDateValues] = useState<string[]>([]);
   const [dynamicBreakdowns, setDynamicBreakdowns] = useState<DynamicsBreakdownValue[]>([]);
@@ -234,7 +228,11 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
           setFilters(next);
         }
       })
-      .catch(() => setMessage("Не вдалося завантажити фільтри. Перевірте базу даних."));
+      .catch(() => {
+        setMessage("Не вдалося завантажити фільтри. Перевірте базу даних.");
+        setIsSummaryLoading(false);
+        setIsChartsLoading(false);
+      });
   }, [initialOptions]);
 
   useEffect(() => {
@@ -253,32 +251,40 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
     if (filters.datasetType === "students" && !filters.snapshotDates.length) return;
 
     let active = true;
-    async function load() {
-      setLoading(true);
+    async function loadSummary() {
+      setIsSummaryLoading(true);
       setMessage(null);
       try {
-        const [summaryResponse, chartsResponse] = await Promise.all([
-          fetch(`/api/dashboard/summary?${params.toString()}`),
-          fetch(`/api/dashboard/charts?${params.toString()}`)
-        ]);
-        if (!summaryResponse.ok || !chartsResponse.ok) {
-          throw new Error("Dashboard API returned an error");
-        }
-        const [summaryData, chartsData] = await Promise.all([
-          summaryResponse.json(),
-          chartsResponse.json()
-        ]);
+        const summaryResponse = await fetch(`/api/dashboard/summary?${params.toString()}`);
+        if (!summaryResponse.ok) throw new Error("Dashboard summary API returned an error");
+        const summaryData = await summaryResponse.json();
         if (!active) return;
         setSummary(summaryData);
+      } catch {
+        if (active) setMessage("Не вдалося оновити основні показники. Дані залишилися без змін.");
+      } finally {
+        if (active) setIsSummaryLoading(false);
+      }
+    }
+
+    async function loadCharts() {
+      setIsChartsLoading(true);
+      setMessage(null);
+      try {
+        const chartsResponse = await fetch(`/api/dashboard/charts?${params.toString()}`);
+        if (!chartsResponse.ok) throw new Error("Dashboard charts API returned an error");
+        const chartsData = await chartsResponse.json();
+        if (!active) return;
         setCharts({ ...defaultCharts, ...chartsData });
         setLoadedDynamicsBreakdowns({});
       } catch {
-        if (active) setMessage("Не вдалося оновити дашборд. Дані залишилися без змін.");
+        if (active) setMessage("Не вдалося оновити графіки. Дані залишилися без змін.");
       } finally {
-        if (active) setLoading(false);
+        if (active) setIsChartsLoading(false);
       }
     }
-    load();
+    loadSummary();
+    loadCharts();
     return () => {
       active = false;
     };
@@ -411,19 +417,27 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
       <DashboardFilters options={options} draft={draft} onDraftChange={setDraft} onApply={applyFilters} onReset={resetFilters} />
 
       {message ? <div className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-900">{message}</div> : null}
-      {loading ? <div className="mt-4 text-sm text-muted">Оновлюю дані, зачекайте декілька секунд...</div> : null}
+      {isSummaryLoading || isChartsLoading ? (
+        <div className="mt-4">
+          <LoadingNotice />
+        </div>
+      ) : null}
 
       {showSummaryCards ? (
         <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <StatCard title={totalLabel} value={summary.totalStudents} />
-          <StatCard title="Закладів освіти" value={summary.institutionsCount} />
-          <StatCard title="Спеціальностей" value={summary.specialitiesCount} />
-          <StatCard title="Представлених регіонів" value={summary.regionsCount} />
-          <DeltaStatCard
-            delta={summary.previousDelta}
-            snapshotDate={filters.snapshotDate}
-            year={filters.years.length === 1 ? filters.years[0] : filters.year}
-          />
+          <StatCard title={totalLabel} value={summary ? summary.totalStudents : "Оновлюю..."} />
+          <StatCard title="Закладів освіти" value={summary ? summary.institutionsCount : "Оновлюю..."} />
+          <StatCard title="Спеціальностей" value={summary ? summary.specialitiesCount : "Оновлюю..."} />
+          <StatCard title="Представлених регіонів" value={summary ? summary.regionsCount : "Оновлюю..."} />
+          {summary ? (
+            <DeltaStatCard
+              delta={summary.previousDelta}
+              snapshotDate={filters.snapshotDate}
+              year={filters.years.length === 1 ? filters.years[0] : filters.year}
+            />
+          ) : (
+            <StatCard title="Зміна до аналогічного зрізу" value="Оновлюю..." />
+          )}
         </section>
       ) : null}
 

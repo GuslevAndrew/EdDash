@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { InstitutionsTable } from "@/components/institutions/InstitutionsTable";
 import { InstitutionMultiSelect } from "@/components/ui/InstitutionMultiSelect";
+import { LoadingNotice } from "@/components/ui/LoadingNotice";
 import { RegionFilter } from "@/components/ui/RegionFilter";
 import { SearchableMultiSelectField } from "@/components/ui/SearchableMultiSelectField";
 import { specialityCatalogSource } from "@/lib/specialities/catalog";
@@ -115,13 +116,19 @@ export function InstitutionsPageClient() {
   const [filters, setFilters] = useState<InstitutionsFiltersResponse | null>(null);
   const [isFiltersLoading, setIsFiltersLoading] = useState(true);
   const [filtersError, setFiltersError] = useState("");
+  const filtersQuery = useMemo(() => {
+    const params = new URLSearchParams();
+    selectedInstitutionIds.forEach((id) => params.append("institution", String(id)));
+    if (showBlocked) params.set("showBlocked", "1");
+    return params.toString();
+  }, [selectedInstitutionIds, showBlocked]);
 
   useEffect(() => {
     const controller = new AbortController();
     setIsFiltersLoading(true);
     setFiltersError("");
 
-    fetch(`/api/institutions/filters${queryString ? `?${queryString}` : ""}`, { signal: controller.signal })
+    fetch(`/api/institutions/filters${filtersQuery ? `?${filtersQuery}` : ""}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Institution filters request failed");
         return response.json() as Promise<InstitutionsFiltersResponse>;
@@ -136,7 +143,7 @@ export function InstitutionsPageClient() {
       });
 
     return () => controller.abort();
-  }, [queryString]);
+  }, [filtersQuery]);
 
   const selectedSnapshotDateValue = useMemo(() => {
     if (isValidDate(requestedDateValue)) return new Date(requestedDateValue).toISOString();
@@ -198,9 +205,9 @@ export function InstitutionsPageClient() {
       <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-soft">
         {filtersError ? <p className="mb-4 rounded-md border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">{filtersError}</p> : null}
         {isFiltersLoading ? (
-          <p className="mb-4 rounded-md border border-line bg-slate-50 px-3 py-2 text-sm text-muted">
-            Оновлюю дані, зачекайте декілька секунд...
-          </p>
+          <div className="mb-4">
+            <LoadingNotice />
+          </div>
         ) : null}
         {filters ? (
           <form key={queryString} className="grid gap-5" action="/institutions">

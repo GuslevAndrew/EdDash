@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { LoadingNotice } from "@/components/ui/LoadingNotice";
 import { formatNumber } from "@/lib/utils/format";
 
 const defaultPageSize = 25;
@@ -129,7 +130,7 @@ export function InstitutionsTable({
         <div>
           <h2 className="text-lg font-semibold text-ink">Таблиця закладів</h2>
           <p className="mt-1 text-sm text-muted">
-            {data ? `Знайдено: ${formatNumber(data.total)}` : "Оновлюю дані, зачекайте декілька секунд..."}
+            {data ? `Знайдено: ${formatNumber(data.total)}` : "Дані таблиці завантажуються."}
           </p>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
             Натискайте на назву стовпчика, щоб відсортувати таблицю за відповідною ознакою. За замовчуванням
@@ -137,6 +138,12 @@ export function InstitutionsTable({
           </p>
         </div>
       </div>
+
+      {isLoading ? (
+        <div className="mt-4">
+          <LoadingNotice />
+        </div>
+      ) : null}
 
       <div className="mt-5 overflow-x-auto">
         <table className="min-w-[1220px] w-full border-collapse text-left text-sm">
