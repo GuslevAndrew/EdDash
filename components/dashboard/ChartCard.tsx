@@ -556,6 +556,9 @@ export function LineChartCard({
               options={dateOptions}
               selectedValues={selectedDateValues ?? dateOptions.map((option) => option.value)}
               onChange={onDateSelectionChange}
+              onReset={() => onDateSelectionChange?.(dateOptions.map((option) => option.value))}
+              disableSearch
+              showResetButton
             />
           ) : null}
           {breakdownOptions.length ? (
@@ -638,7 +641,10 @@ function MiniMultiSelect({
   selectedLabel,
   options,
   selectedValues,
-  onChange
+  onChange,
+  onReset,
+  disableSearch = false,
+  showResetButton = false
 }: {
   label: string;
   allLabel: string;
@@ -646,6 +652,9 @@ function MiniMultiSelect({
   options: MiniOption[];
   selectedValues: string[];
   onChange?: (selectedValues: string[]) => void;
+  onReset?: () => void;
+  disableSearch?: boolean;
+  showResetButton?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const detailsRef = useAutoCloseDetails();
@@ -675,6 +684,14 @@ function MiniMultiSelect({
     onChange(selectedOptions.length === options.length ? [] : options.map((option) => option.value));
   }
 
+  function resetSelection() {
+    if (onReset) {
+      onReset();
+      return;
+    }
+    onChange?.([]);
+  }
+
   return (
     <div className="relative max-w-sm">
       <div className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</div>
@@ -684,12 +701,24 @@ function MiniMultiSelect({
           <span className="text-xs text-muted group-open:rotate-180">▼</span>
         </summary>
         <div className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-md border border-line bg-white p-2 shadow-lg">
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="mb-2 w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-brand-500"
-            placeholder="Пошук у списку"
-          />
+          {!disableSearch ? (
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="mb-2 w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-brand-500"
+              placeholder="Пошук у списку"
+            />
+          ) : null}
+          {showResetButton ? (
+            <button
+              type="button"
+              onClick={resetSelection}
+              disabled={selectedOptions.length === options.length}
+              className="mb-2 w-full rounded-md border border-line px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              Скинути
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={toggleAll}
