@@ -425,10 +425,10 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
 
       {showSummaryCards ? (
         <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <StatCard title={totalLabel} value={summary ? summary.totalStudents : "Оновлюю..."} />
-          <StatCard title="Закладів освіти" value={summary ? summary.institutionsCount : "Оновлюю..."} />
-          <StatCard title="Спеціальностей" value={summary ? summary.specialitiesCount : "Оновлюю..."} />
-          <StatCard title="Представлених регіонів" value={summary ? summary.regionsCount : "Оновлюю..."} />
+          <StatCard title={totalLabel} value={summary?.totalStudents ?? ""} isLoading={!summary} />
+          <StatCard title="Закладів освіти" value={summary?.institutionsCount ?? ""} isLoading={!summary} />
+          <StatCard title="Спеціальностей" value={summary?.specialitiesCount ?? ""} isLoading={!summary} />
+          <StatCard title="Представлених регіонів" value={summary?.regionsCount ?? ""} isLoading={!summary} />
           {summary ? (
             <DeltaStatCard
               delta={summary.previousDelta}
@@ -436,7 +436,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
               year={filters.years.length === 1 ? filters.years[0] : filters.year}
             />
           ) : (
-            <StatCard title="Зміна до аналогічного зрізу" value="Оновлюю..." />
+            <StatCard title="Зміна до аналогічного зрізу" value="" isLoading />
           )}
         </section>
       ) : null}

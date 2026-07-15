@@ -4,12 +4,14 @@ export function StatCard({
   title,
   value,
   note,
-  tone = "neutral"
+  tone = "neutral",
+  isLoading = false
 }: {
   title: string;
   value: number | string;
   note?: string;
   tone?: "neutral" | "positive" | "negative";
+  isLoading?: boolean;
 }) {
   const color = tone === "positive" ? "text-emerald-700" : tone === "negative" ? "text-rose-700" : "text-ink";
   const displayValue = typeof value === "number" ? formatNumber(value) : value;
@@ -17,7 +19,11 @@ export function StatCard({
   return (
     <div className="rounded-lg border border-line bg-white p-5 shadow-soft">
       <p className="text-sm font-medium text-muted">{title}</p>
-      <p className={`mt-2 text-2xl font-bold ${color}`}>{displayValue}</p>
+      {isLoading ? (
+        <div className="mt-3 h-7 w-28 animate-pulse rounded bg-slate-100" />
+      ) : (
+        <p className={`mt-2 text-2xl font-bold ${color}`}>{displayValue}</p>
+      )}
       {note ? <p className="mt-2 text-xs leading-5 text-slate-500">{note}</p> : null}
     </div>
   );
