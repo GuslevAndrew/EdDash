@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { LoadingNotice } from "@/components/ui/LoadingNotice";
 import { formatNumber } from "@/lib/utils/format";
 
 const defaultPageSize = 25;
@@ -138,12 +137,6 @@ export function InstitutionsTable({
           </p>
         </div>
       </div>
-
-      {isLoading ? (
-        <div className="mt-4">
-          <LoadingNotice />
-        </div>
-      ) : null}
 
       <div className="mt-5 overflow-x-auto">
         <table className="min-w-[1220px] w-full border-collapse text-left text-sm">
