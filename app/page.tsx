@@ -1,8 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/AppShell";
 import { getLastSuccessfulImport } from "@/lib/dashboard/queries";
 import { formatDate } from "@/lib/utils/format";
+
+export const metadata: Metadata = {
+  title: "EdDash — освіта як на дошці",
+  description:
+    "EdDash допомагає шукати, перевіряти та аналізувати відкриті офіційні дані про освіту після школи в Україні.",
+  alternates: {
+    canonical: "/"
+  }
+};
 
 const primaryScenarios = [
   {

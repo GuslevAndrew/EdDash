@@ -1,6 +1,16 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/AppShell";
 import { InstitutionsPageClient } from "@/components/institutions/InstitutionsPageClient";
+
+export const metadata: Metadata = {
+  title: "Заклади освіти",
+  description:
+    "Довідкова таблиця закладів вищої та фахової передвищої освіти України на основі відкритих даних ЄДЕБО.",
+  alternates: {
+    canonical: "/institutions"
+  }
+};
 
 function InstitutionsShellFallback() {
   return (

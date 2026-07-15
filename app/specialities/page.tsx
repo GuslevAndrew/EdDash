@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/AppShell";
 import { specialityCatalogSource } from "@/lib/specialities/catalog";
+
+export const metadata: Metadata = {
+  title: "Галузі і спеціальності",
+  description:
+    "Довідник галузей знань і спеціальностей для вступників: коди, назви та доступність для рівнів підготовки.",
+  alternates: {
+    canonical: "/specialities"
+  }
+};
 
 type LevelKey = keyof (typeof specialityCatalogSource.specialities)[number]["levels"];
 

@@ -1,4 +1,14 @@
+import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/AppShell";
+
+export const metadata: Metadata = {
+  title: "Профорієнтація та тестування",
+  description:
+    "Майбутній розділ EdDash для профорієнтації, тестування та матеріалів, що допомагають краще зрозуміти освітній вибір.",
+  alternates: {
+    canonical: "/testing-center"
+  }
+};
 
 export default function TestingCenterPage() {
   return (

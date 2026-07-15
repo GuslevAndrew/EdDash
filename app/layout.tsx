@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { StructuredData } from "@/components/seo/StructuredData";
 import "./globals.css";
+
+const googleSiteVerification = process.env.GOOGLE_SITE_VERIFICATION;
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://eddash.info"),
@@ -37,13 +41,27 @@ export const metadata: Metadata = {
   icons: {
     icon: "/brand/eddash-icon.png",
     apple: "/brand/eddash-icon.png"
-  }
+  },
+  alternates: {
+    canonical: "/"
+  },
+  ...(googleSiteVerification
+    ? {
+        verification: {
+          google: googleSiteVerification
+        }
+      }
+    : {})
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="uk">
-      <body>{children}</body>
+      <body>
+        {children}
+        <StructuredData />
+        <GoogleAnalytics />
+      </body>
     </html>
   );
 }
