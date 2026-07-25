@@ -18,10 +18,15 @@ type SortDirection = (typeof sortDirections)[number];
 type InstitutionSortRef = {
   id: number;
   name: string;
+  shortName: string | null;
   externalId: string | null;
   parentExternalId: string | null;
   foundationYear: string | null;
   ownership: string | null;
+  settlement: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
   website: string | null;
   blockedAt: string | null;
   region: {
@@ -160,10 +165,15 @@ export async function GET(request: Request) {
   const institutionSelect = {
     id: true,
     name: true,
+    shortName: true,
     externalId: true,
     parentExternalId: true,
     foundationYear: true,
     ownership: true,
+    settlement: true,
+    address: true,
+    phone: true,
+    email: true,
     website: true,
     blockedAt: true,
     region: { select: { name: true } }
@@ -189,12 +199,17 @@ export async function GET(request: Request) {
     .filter((item) => parsed.educationLevel.includes(getCanonicalEducationLevelName(item.name)))
     .map((item) => item.id);
 
+  const visibleExternalIds = new Set(
+    filteredInstitutionRefs
+      .map((institution) => institution.externalId)
+      .filter((id): id is string => Boolean(id))
+  );
   const parentExternalIds = [
     ...new Set(
       filteredInstitutionRefs
         .map((institution) => institution.parentExternalId)
         .filter((id): id is string => Boolean(id))
-        .filter((id) => !filteredInstitutionRefs.some((institution) => institution.externalId === id))
+        .filter((id) => !visibleExternalIds.has(id))
     )
   ];
   const parentInstitutions = parentExternalIds.length
@@ -238,33 +253,8 @@ export async function GET(request: Request) {
         compareInstitutionRefs(first, second, parsed.sort, parsed.direction, parentNamesByExternalId, studentsByInstitution)
       )
     : filteredInstitutionRefs;
-  const pageInstitutionIds = sortedInstitutionRefs
+  const institutions = sortedInstitutionRefs
     .slice(needsFullInstitutionSort ? (parsed.page - 1) * parsed.pageSize : 0, needsFullInstitutionSort ? parsed.page * parsed.pageSize : sortedInstitutionRefs.length)
-    .map((institution) => institution.id);
-  const pageInstitutionOrder = new Map(pageInstitutionIds.map((id, index) => [id, index] as const));
-  const institutions = pageInstitutionIds.length
-    ? (
-        await prisma.institution.findMany({
-          where: { id: { in: pageInstitutionIds } },
-          select: {
-            id: true,
-            name: true,
-            shortName: true,
-            externalId: true,
-            parentExternalId: true,
-            foundationYear: true,
-            ownership: true,
-            settlement: true,
-            address: true,
-            phone: true,
-            email: true,
-            website: true,
-            blockedAt: true,
-            region: { select: { name: true } }
-          }
-        })
-      ).sort((first, second) => (pageInstitutionOrder.get(first.id) ?? 0) - (pageInstitutionOrder.get(second.id) ?? 0))
-    : [];
   const parentsByExternalId = new Map([
     ...institutions
       .filter((institution) => institution.externalId)

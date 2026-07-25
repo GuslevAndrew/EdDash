@@ -68,27 +68,38 @@ export async function GET(request: Request) {
       return NextResponse.json({ snapshotDate: null, regions: [] }, { headers: cacheHeaders });
     }
 
-    const rows = await prisma.studentSnapshot.groupBy({
-      by: ["regionId", "institutionId"],
-      where: {
-        snapshotDate: selectedSnapshotDate,
-        regionId: parsed.region.length ? { in: parsed.region } : undefined,
-        institutionId: parsed.institution.length ? { in: parsed.institution } : undefined,
-        institution: {
-          institutionTypeCode: { in: filteredInstitutionTypeCodes },
-          blockedAt: showBlocked ? undefined : null
-        },
-        speciality: {
-          canonicalFieldCode: parsed.field.length ? { in: parsed.field } : undefined,
-          canonicalCode: parsed.speciality.length ? { in: parsed.speciality } : undefined
-        },
-        educationLevelId: selectedEducationLevelIds.length ? { in: selectedEducationLevelIds } : undefined,
-        entryBaseId: parsed.entryBase.length ? { in: parsed.entryBase } : undefined,
-        studyFormId: parsed.studyForm.length ? { in: parsed.studyForm } : undefined,
-        studyForm: parsed.studyForm.length ? undefined : { code: "total" }
+    const snapshotWhere = {
+      snapshotDate: selectedSnapshotDate,
+      regionId: parsed.region.length ? { in: parsed.region } : undefined,
+      institutionId: parsed.institution.length ? { in: parsed.institution } : undefined,
+      institution: {
+        institutionTypeCode: { in: filteredInstitutionTypeCodes },
+        blockedAt: showBlocked ? undefined : null
       },
-      _sum: { studentsCount: true }
-    });
+      speciality: {
+        canonicalFieldCode: parsed.field.length ? { in: parsed.field } : undefined,
+        canonicalCode: parsed.speciality.length ? { in: parsed.speciality } : undefined
+      },
+      educationLevelId: selectedEducationLevelIds.length ? { in: selectedEducationLevelIds } : undefined,
+      entryBaseId: parsed.entryBase.length ? { in: parsed.entryBase } : undefined,
+      studyFormId: parsed.studyForm.length ? { in: parsed.studyForm } : undefined,
+      studyForm: parsed.studyForm.length ? undefined : { code: "total" }
+    };
+
+    const regionRows = hasStudentDetailFilters
+      ? []
+      : await prisma.studentSnapshot.groupBy({
+          by: ["regionId"],
+          where: snapshotWhere,
+          _sum: { studentsCount: true }
+        });
+    const institutionRows = hasStudentDetailFilters
+      ? await prisma.studentSnapshot.groupBy({
+          by: ["regionId", "institutionId"],
+          where: snapshotWhere,
+          _sum: { studentsCount: true }
+        })
+      : [];
 
     const institutionCountRows = hasStudentDetailFilters
       ? []
@@ -105,7 +116,8 @@ export async function GET(request: Request) {
 
     const regionIds = [
       ...new Set([
-        ...rows.map((row) => row.regionId).filter((id): id is number => Boolean(id)),
+        ...regionRows.map((row) => row.regionId).filter((id): id is number => Boolean(id)),
+        ...institutionRows.map((row) => row.regionId).filter((id): id is number => Boolean(id)),
         ...institutionCountRows.map((row) => row.regionId).filter((id): id is number => Boolean(id))
       ])
     ];
@@ -125,7 +137,14 @@ export async function GET(request: Request) {
       totalsByRegion.set(regionId, current);
     }
 
-    for (const row of rows) {
+    for (const row of regionRows) {
+      const regionId = row.regionId ?? 0;
+      const current = totalsByRegion.get(regionId) ?? { institutionIds: new Set<number>(), institutionsCount: 0, students: 0 };
+      current.students += row._sum.studentsCount ?? 0;
+      totalsByRegion.set(regionId, current);
+    }
+
+    for (const row of institutionRows) {
       const regionId = row.regionId ?? 0;
       const current = totalsByRegion.get(regionId) ?? { institutionIds: new Set<number>(), institutionsCount: 0, students: 0 };
       current.institutionIds.add(row.institutionId);
