@@ -70,6 +70,15 @@ export function RegionFilter({ regions, selectedRegionIds }: RegionFilterProps) 
               <span>{region.name}</span>
             </label>
           ))}
+          <div className="mt-2 border-t border-line pt-2">
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-slate-50"
+            >
+              Скинути
+            </button>
+          </div>
         </div>
       </details>
     </div>
