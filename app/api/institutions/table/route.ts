@@ -155,6 +155,13 @@ export async function GET(request: Request) {
   const showBlocked = parsed.showBlocked === "1";
   const needsFullInstitutionSort = parsed.sort === "students" || parsed.sort === "parent";
   const requestedDate = parsed.date && !Number.isNaN(new Date(parsed.date).getTime()) ? new Date(parsed.date) : null;
+  const hasStudentDetailFilters = Boolean(
+    parsed.field.length ||
+    parsed.speciality.length ||
+    parsed.educationLevel.length ||
+    parsed.entryBase.length ||
+    parsed.studyForm.length
+  );
 
   const where: Prisma.InstitutionWhereInput = {
     institutionTypeCode: { in: filteredInstitutionTypeCodes },
@@ -185,19 +192,44 @@ export async function GET(request: Request) {
   const educationLevels = parsed.educationLevel.length
     ? await prisma.educationLevel.findMany({ select: { id: true, name: true } })
     : [];
-  const total = await prisma.institution.count({ where });
+  const selectedSnapshotDate = requestedDate ?? latestSnapshot?.snapshotDate ?? null;
+  const selectedEducationLevelIds = educationLevels
+    .filter((item) => parsed.educationLevel.includes(getCanonicalEducationLevelName(item.name)))
+    .map((item) => item.id);
+  const studentSnapshotWhere: Prisma.StudentSnapshotWhereInput = {
+    snapshotDate: selectedSnapshotDate ?? undefined,
+    institution: where,
+    speciality: {
+      canonicalFieldCode: parsed.field.length ? { in: parsed.field } : undefined,
+      canonicalCode: parsed.speciality.length ? { in: parsed.speciality } : undefined
+    },
+    educationLevelId: selectedEducationLevelIds.length ? { in: selectedEducationLevelIds } : undefined,
+    entryBaseId: parsed.entryBase.length ? { in: parsed.entryBase } : undefined,
+    studyFormId: parsed.studyForm.length ? { in: parsed.studyForm } : undefined,
+    studyForm: parsed.studyForm.length ? undefined : { code: "total" }
+  };
+  const matchingStudentTotals = hasStudentDetailFilters && selectedSnapshotDate
+    ? await prisma.studentSnapshot.groupBy({
+        by: ["institutionId"],
+        where: studentSnapshotWhere,
+        _sum: { studentsCount: true }
+      })
+    : [];
+  const matchingInstitutionIds = matchingStudentTotals.map((item) => item.institutionId);
+  const effectiveWhere: Prisma.InstitutionWhereInput = hasStudentDetailFilters
+    ? {
+        ...where,
+        id: matchingInstitutionIds.length ? { in: matchingInstitutionIds } : { in: [] }
+      }
+    : where;
+  const total = await prisma.institution.count({ where: effectiveWhere });
   const filteredInstitutionRefs = await prisma.institution.findMany({
-    where,
+    where: effectiveWhere,
     select: institutionSelect,
     orderBy: needsFullInstitutionSort ? undefined : institutionOrderBy(parsed.sort, parsed.direction),
     skip: needsFullInstitutionSort ? undefined : (parsed.page - 1) * parsed.pageSize,
     take: needsFullInstitutionSort ? undefined : parsed.pageSize
   });
-
-  const selectedSnapshotDate = requestedDate ?? latestSnapshot?.snapshotDate ?? null;
-  const selectedEducationLevelIds = educationLevels
-    .filter((item) => parsed.educationLevel.includes(getCanonicalEducationLevelName(item.name)))
-    .map((item) => item.id);
 
   const visibleExternalIds = new Set(
     filteredInstitutionRefs
@@ -228,7 +260,9 @@ export async function GET(request: Request) {
   ]);
 
   const studentTotals = filteredInstitutionRefs.length && selectedSnapshotDate
-    ? await prisma.studentSnapshot.groupBy({
+    ? hasStudentDetailFilters
+      ? matchingStudentTotals
+      : await prisma.studentSnapshot.groupBy({
         by: ["institutionId"],
         where: {
           snapshotDate: selectedSnapshotDate,
