@@ -25,7 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               Дашборд
             </NavLink>
             <NavLink href="/institutions">
-              Заклади освіти
+              EdМапа
             </NavLink>
             <NavLink href="/specialities">
               Галузі і спеціальності
