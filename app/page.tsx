@@ -22,6 +22,12 @@ const primaryScenarios = [
     action: "Переглянути заклади"
   },
   {
+    title: "Відкрити EdМапу",
+    text: "Подивіться на карті розподіл закладів освіти та контингенту за регіонами відповідно до обраних фільтрів.",
+    href: "/institutions",
+    action: "Перейти до EdМапи"
+  },
+  {
     title: "Розібратися зі спеціальностями",
     text: "Подивіться, до якої галузі належить спеціальність, як вона позначається в новому переліку і для яких рівнів доступна.",
     href: "/specialities",
@@ -98,7 +104,7 @@ export default async function HomePage() {
           </p>
         </div>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {primaryScenarios.map((item) => (
             <Link
               key={item.title}
