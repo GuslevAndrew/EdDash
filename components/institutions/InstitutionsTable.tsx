@@ -127,7 +127,7 @@ export function InstitutionsTable({
     <section className="rounded-lg border border-line bg-white p-5 shadow-soft">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-ink">Таблиця закладів</h2>
+          <h2 className="text-lg font-semibold text-ink">Заклади освіти</h2>
           <p className="mt-1 text-sm text-muted">
             {data ? `Знайдено: ${formatNumber(data.total)}` : "Дані таблиці завантажуються."}
           </p>
