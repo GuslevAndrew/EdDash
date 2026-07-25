@@ -169,18 +169,20 @@ export async function GET(request: Request) {
     region: { select: { name: true } }
   } satisfies Prisma.InstitutionSelect;
 
-  const [latestSnapshot, educationLevels, total, filteredInstitutionRefs] = await Promise.all([
-    prisma.studentSnapshot.findFirst({ orderBy: { snapshotDate: "desc" }, select: { snapshotDate: true } }),
-    prisma.educationLevel.findMany({ select: { id: true, name: true } }),
-    prisma.institution.count({ where }),
-    prisma.institution.findMany({
-      where,
-      select: institutionSelect,
-      orderBy: needsFullInstitutionSort ? undefined : institutionOrderBy(parsed.sort, parsed.direction),
-      skip: needsFullInstitutionSort ? undefined : (parsed.page - 1) * parsed.pageSize,
-      take: needsFullInstitutionSort ? undefined : parsed.pageSize
-    })
-  ]);
+  const latestSnapshot = requestedDate
+    ? null
+    : await prisma.studentSnapshot.findFirst({ orderBy: { snapshotDate: "desc" }, select: { snapshotDate: true } });
+  const educationLevels = parsed.educationLevel.length
+    ? await prisma.educationLevel.findMany({ select: { id: true, name: true } })
+    : [];
+  const total = await prisma.institution.count({ where });
+  const filteredInstitutionRefs = await prisma.institution.findMany({
+    where,
+    select: institutionSelect,
+    orderBy: needsFullInstitutionSort ? undefined : institutionOrderBy(parsed.sort, parsed.direction),
+    skip: needsFullInstitutionSort ? undefined : (parsed.page - 1) * parsed.pageSize,
+    take: needsFullInstitutionSort ? undefined : parsed.pageSize
+  });
 
   const selectedSnapshotDate = requestedDate ?? latestSnapshot?.snapshotDate ?? null;
   const selectedEducationLevelIds = educationLevels

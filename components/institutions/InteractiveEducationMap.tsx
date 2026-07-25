@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LoadingNotice } from "@/components/ui/LoadingNotice";
 import { formatDate, formatNumber } from "@/lib/utils/format";
 
@@ -10,14 +10,14 @@ type SvgRegion = {
   d: string;
 };
 
-type RegionMapStat = {
+export type RegionMapStat = {
   regionId: number;
   regionName: string;
   institutionsCount: number;
   studentsCount: number;
 };
 
-type RegionMapResponse = {
+export type RegionMapResponse = {
   snapshotDate: string | null;
   regions: RegionMapStat[];
 };
@@ -38,9 +38,9 @@ const svgRegionNames: Record<string, string> = {
   kharkiv: "Харківська область",
   kherson: "Херсонська область",
   khmelnytskyi: "Хмельницька область",
-  kiev: "Київська область",
+  kyiv: "Київська область",
   kirovohrad: "Кіровоградська область",
-  kyiv: "м. Київ",
+  "kyiv-city": "м. Київ",
   luhansk: "Луганська область",
   lviv: "Львівська область",
   mykolaiv: "Миколаївська область",
@@ -57,13 +57,33 @@ const svgRegionNames: Record<string, string> = {
   zhytomyr: "Житомирська область"
 };
 
-const labelOffsets: Record<string, { x: number; y: number }> = {
-  kyiv: { x: 32, y: -16 },
-  kiev: { x: -10, y: 18 },
-  sevastopol: { x: 0, y: 18 },
-  crimea: { x: 8, y: 22 },
-  chernivtsi: { x: -12, y: 12 },
-  zakarpattia: { x: -10, y: 8 }
+const labelPositions: Record<string, RegionLabel> = {
+  volyn: { x: 150, y: 125 },
+  rivne: { x: 235, y: 130 },
+  zhytomyr: { x: 350, y: 165 },
+  chernihiv: { x: 545, y: 110 },
+  sumy: { x: 675, y: 115 },
+  lviv: { x: 105, y: 240 },
+  ternopil: { x: 190, y: 270 },
+  khmelnytskyi: { x: 275, y: 255 },
+  kyiv: { x: 500, y: 215 },
+  "kyiv-city": { x: 465, y: 180 },
+  poltava: { x: 645, y: 250 },
+  kharkiv: { x: 790, y: 255 },
+  luhansk: { x: 925, y: 310 },
+  zakarpattia: { x: 80, y: 340 },
+  "ivano-frankivsk": { x: 140, y: 320 },
+  chernivtsi: { x: 225, y: 365 },
+  vinnytsia: { x: 365, y: 305 },
+  cherkasy: { x: 505, y: 275 },
+  kirovohrad: { x: 540, y: 345 },
+  dnipropetrovsk: { x: 710, y: 355 },
+  donetsk: { x: 855, y: 385 },
+  odessa: { x: 420, y: 485 },
+  mykolaiv: { x: 530, y: 435 },
+  kherson: { x: 625, y: 500 },
+  zaporizhia: { x: 755, y: 450 },
+  crimea: { x: 690, y: 600 }
 };
 
 function normalizeRegionName(value: string): string {
@@ -100,14 +120,14 @@ function parseUkraineSvg(svgText: string): SvgRegion[] {
 
 export function InteractiveEducationMap({
   query,
-  selectedRegionIds
+  selectedRegionIds,
+  onDataChange
 }: {
   query: string;
   selectedRegionIds: number[];
+  onDataChange?: (data: RegionMapResponse | null) => void;
 }) {
-  const svgRef = useRef<SVGSVGElement | null>(null);
   const [regions, setRegions] = useState<SvgRegion[]>([]);
-  const [labels, setLabels] = useState<Record<string, RegionLabel>>({});
   const [data, setData] = useState<RegionMapResponse | null>(null);
   const [error, setError] = useState("");
   const isSelectedMode = selectedRegionIds.length > 0;
@@ -133,38 +153,25 @@ export function InteractiveEducationMap({
     const controller = new AbortController();
     setError("");
     setData(null);
+    onDataChange?.(null);
 
     fetch(`/api/institutions/map${query ? `?${query}` : ""}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Map data request failed");
         return response.json() as Promise<RegionMapResponse>;
       })
-      .then(setData)
+      .then((nextData) => {
+        setData(nextData);
+        onDataChange?.(nextData);
+      })
       .catch((mapError) => {
         if (mapError instanceof DOMException && mapError.name === "AbortError") return;
         setError("Не вдалося завантажити дані для карти.");
+        onDataChange?.(null);
       });
 
     return () => controller.abort();
-  }, [query]);
-
-  useEffect(() => {
-    const svg = svgRef.current;
-    if (!svg || !regions.length) return;
-
-    const nextLabels: Record<string, RegionLabel> = {};
-    for (const region of regions) {
-      const path = svg.querySelector<SVGPathElement>(`path[data-region-id="${region.id}"]`);
-      if (!path) continue;
-      const box = path.getBBox();
-      const offset = labelOffsets[region.id] ?? { x: 0, y: 0 };
-      nextLabels[region.id] = {
-        x: box.x + box.width / 2 + offset.x,
-        y: box.y + box.height / 2 + offset.y
-      };
-    }
-    setLabels(nextLabels);
-  }, [regions]);
+  }, [onDataChange, query]);
 
   const statsByRegion = useMemo(() => {
     const entries = data?.regions.map((region) => [normalizeRegionName(region.regionName), region] as const) ?? [];
@@ -187,7 +194,10 @@ export function InteractiveEducationMap({
         <div className="rounded-md border border-line bg-slate-50 px-3 py-2 text-right text-xs text-muted">
           <div>{data?.snapshotDate ? `Станом на ${formatDate(data.snapshotDate)}` : "Дата визначається фільтрами"}</div>
           <div className="mt-1 font-semibold text-slate-800">
-            Разом: {formatNumber(totalInstitutions)} закладів / {formatNumber(totalStudents)} осіб
+            Закладів освіти: {formatNumber(totalInstitutions)}
+          </div>
+          <div className="mt-1 font-semibold text-slate-800">
+            Кількість здобувачів: {formatNumber(totalStudents)}
           </div>
         </div>
       </div>
@@ -200,7 +210,6 @@ export function InteractiveEducationMap({
       ) : (
         <div className="mt-4 overflow-hidden rounded-lg border border-line bg-slate-50 p-3">
           <svg
-            ref={svgRef}
             role="img"
             aria-label="Карта України з показниками закладів освіти та контингенту"
             viewBox="0 0 1000 670"
@@ -216,7 +225,7 @@ export function InteractiveEducationMap({
                 const fill = shouldShowData
                   ? getFillColor(stat?.studentsCount ?? 0, maxStudents, isSelectedMode, hasData)
                   : "#ffffff";
-                const stroke = isSelectedMode && hasData ? "#1d4ed8" : "#cbd5e1";
+                const stroke = isSelectedMode && hasData ? "#0f3ea8" : "#475569";
 
                 return (
                   <path
@@ -225,7 +234,7 @@ export function InteractiveEducationMap({
                     d={region.d}
                     fill={fill}
                     stroke={stroke}
-                    strokeWidth={isSelectedMode && hasData ? 1.8 : 1}
+                    strokeWidth={isSelectedMode && hasData ? 2.7 : 1.65}
                     vectorEffect="non-scaling-stroke"
                     className="transition-colors duration-200"
                   >
@@ -241,7 +250,7 @@ export function InteractiveEducationMap({
               {regions.map((region) => {
                 const ukrainianName = svgRegionNames[region.id] ?? region.name;
                 const stat = statsByRegion.get(normalizeRegionName(ukrainianName));
-                const label = labels[region.id];
+                const label = labelPositions[region.id];
                 const shouldShowData = (!isSelectedMode || stat) && stat && label;
                 if (!shouldShowData) return null;
 
@@ -251,6 +260,10 @@ export function InteractiveEducationMap({
                     x={label.x}
                     y={label.y}
                     textAnchor="middle"
+                    paintOrder="stroke"
+                    stroke="#ffffff"
+                    strokeWidth="4"
+                    strokeLinejoin="round"
                     className="pointer-events-none select-none fill-slate-950"
                   >
                     <tspan x={label.x} dy="0" className="text-[13px] font-extrabold">

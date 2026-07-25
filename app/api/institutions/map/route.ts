@@ -46,14 +46,23 @@ export async function GET(request: Request) {
     const showBlocked = parsed.showBlocked === "1";
     const requestedDate = parsed.date && !Number.isNaN(new Date(parsed.date).getTime()) ? new Date(parsed.date) : null;
 
-    const [latestSnapshot, educationLevels] = await Promise.all([
-      prisma.studentSnapshot.findFirst({ orderBy: { snapshotDate: "desc" }, select: { snapshotDate: true } }),
-      prisma.educationLevel.findMany({ select: { id: true, name: true } })
-    ]);
+    const latestSnapshot = requestedDate
+      ? null
+      : await prisma.studentSnapshot.findFirst({ orderBy: { snapshotDate: "desc" }, select: { snapshotDate: true } });
+    const educationLevels = parsed.educationLevel.length
+      ? await prisma.educationLevel.findMany({ select: { id: true, name: true } })
+      : [];
     const selectedSnapshotDate = requestedDate ?? latestSnapshot?.snapshotDate ?? null;
     const selectedEducationLevelIds = educationLevels
       .filter((item) => parsed.educationLevel.includes(getCanonicalEducationLevelName(item.name)))
       .map((item) => item.id);
+    const hasStudentDetailFilters = Boolean(
+      parsed.field.length ||
+      parsed.speciality.length ||
+      selectedEducationLevelIds.length ||
+      parsed.entryBase.length ||
+      parsed.studyForm.length
+    );
 
     if (!selectedSnapshotDate) {
       return NextResponse.json({ snapshotDate: null, regions: [] }, { headers: cacheHeaders });
@@ -81,7 +90,25 @@ export async function GET(request: Request) {
       _sum: { studentsCount: true }
     });
 
-    const regionIds = [...new Set(rows.map((row) => row.regionId).filter((id): id is number => Boolean(id)))];
+    const institutionCountRows = hasStudentDetailFilters
+      ? []
+      : await prisma.institution.groupBy({
+          by: ["regionId"],
+          where: {
+            institutionTypeCode: { in: filteredInstitutionTypeCodes },
+            regionId: parsed.region.length ? { in: parsed.region } : undefined,
+            id: parsed.institution.length ? { in: parsed.institution } : undefined,
+            blockedAt: showBlocked ? undefined : null
+          },
+          _count: { id: true }
+        });
+
+    const regionIds = [
+      ...new Set([
+        ...rows.map((row) => row.regionId).filter((id): id is number => Boolean(id)),
+        ...institutionCountRows.map((row) => row.regionId).filter((id): id is number => Boolean(id))
+      ])
+    ];
     const regions = regionIds.length
       ? await prisma.region.findMany({
           where: { id: { in: regionIds } },
@@ -89,22 +116,30 @@ export async function GET(request: Request) {
         })
       : [];
     const regionNames = new Map(regions.map((region) => [region.id, region.name]));
-    const totalsByRegion = new Map<number, { institutionIds: Set<number>; students: number }>();
+    const totalsByRegion = new Map<number, { institutionIds: Set<number>; institutionsCount: number; students: number }>();
+
+    for (const row of institutionCountRows) {
+      const regionId = row.regionId ?? 0;
+      const current = totalsByRegion.get(regionId) ?? { institutionIds: new Set<number>(), institutionsCount: 0, students: 0 };
+      current.institutionsCount = row._count.id;
+      totalsByRegion.set(regionId, current);
+    }
 
     for (const row of rows) {
-      if (!row.regionId) continue;
-      const current = totalsByRegion.get(row.regionId) ?? { institutionIds: new Set<number>(), students: 0 };
+      const regionId = row.regionId ?? 0;
+      const current = totalsByRegion.get(regionId) ?? { institutionIds: new Set<number>(), institutionsCount: 0, students: 0 };
       current.institutionIds.add(row.institutionId);
       current.students += row._sum.studentsCount ?? 0;
-      totalsByRegion.set(row.regionId, current);
+      if (hasStudentDetailFilters) current.institutionsCount = current.institutionIds.size;
+      totalsByRegion.set(regionId, current);
     }
 
     return NextResponse.json({
       snapshotDate: selectedSnapshotDate.toISOString(),
       regions: [...totalsByRegion.entries()].map(([regionId, totals]) => ({
         regionId,
-        regionName: regionNames.get(regionId) ?? "Без регіону",
-        institutionsCount: totals.institutionIds.size,
+        regionName: regionId === 0 ? "Без регіону" : regionNames.get(regionId) ?? "Без регіону",
+        institutionsCount: totals.institutionsCount,
         studentsCount: totals.students
       }))
     }, { headers: cacheHeaders });

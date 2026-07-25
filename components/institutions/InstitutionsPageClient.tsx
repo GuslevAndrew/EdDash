@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { InteractiveEducationMap } from "@/components/institutions/InteractiveEducationMap";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { InteractiveEducationMap, type RegionMapResponse } from "@/components/institutions/InteractiveEducationMap";
 import { InstitutionsTable } from "@/components/institutions/InstitutionsTable";
 import { InstitutionMultiSelect } from "@/components/ui/InstitutionMultiSelect";
 import { LoadingNotice } from "@/components/ui/LoadingNotice";
@@ -117,6 +117,7 @@ export function InstitutionsPageClient() {
   const [filters, setFilters] = useState<InstitutionsFiltersResponse | null>(null);
   const [isFiltersLoading, setIsFiltersLoading] = useState(true);
   const [filtersError, setFiltersError] = useState("");
+  const [mapSummary, setMapSummary] = useState<RegionMapResponse | null>(null);
   const filtersQuery = useMemo(() => {
     const params = new URLSearchParams();
     selectedInstitutionIds.forEach((id) => params.append("institution", String(id)));
@@ -188,6 +189,13 @@ export function InstitutionsPageClient() {
     ]
   );
   const tableQuery = filters ? makeQueryString(currentParams) : queryString;
+  const studentsTotal = useMemo(
+    () => mapSummary?.regions.reduce((sum, region) => sum + region.studentsCount, 0) ?? null,
+    [mapSummary?.regions]
+  );
+  const handleMapDataChange = useCallback((nextData: RegionMapResponse | null) => {
+    setMapSummary(nextData);
+  }, []);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -348,7 +356,7 @@ export function InstitutionsPageClient() {
       ) : null}
 
       {filters ? (
-        <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <SummaryCard title="Усього закладів" value={formatNumber(filters.totalByLevel.reduce((sum, item) => sum + item.count, 0))} />
           <SummaryCard
             title="Вища освіта"
@@ -359,12 +367,13 @@ export function InstitutionsPageClient() {
             value={formatNumber(filters.totalByLevel.find((item) => item.institutionTypeCode === "9")?.count ?? 0)}
           />
           <SummaryCard title="Регіонів" value={formatNumber(filters.totalRegions)} />
+          <SummaryCard title="Кількість здобувачів" value={studentsTotal === null ? "Оновлюю..." : formatNumber(studentsTotal)} />
         </section>
       ) : (
         <SummarySkeleton />
       )}
 
-      <InteractiveEducationMap query={tableQuery} selectedRegionIds={regionIds} />
+      <InteractiveEducationMap query={tableQuery} selectedRegionIds={regionIds} onDataChange={handleMapDataChange} />
 
       <InstitutionsTable
         key={tableQuery}
@@ -415,8 +424,8 @@ function FilterSkeleton() {
 
 function SummarySkeleton() {
   return (
-    <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {Array.from({ length: 4 }).map((_, index) => (
+    <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      {Array.from({ length: 5 }).map((_, index) => (
         <div key={index} className="rounded-lg border border-line bg-white p-5 shadow-soft">
           <div className="h-4 w-24 rounded bg-slate-100" />
           <div className="mt-3 h-7 w-20 rounded bg-slate-100" />
