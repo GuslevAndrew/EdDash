@@ -89,6 +89,23 @@ function isValidDate(value: string): boolean {
   return Boolean(value) && !Number.isNaN(new Date(value).getTime());
 }
 
+function summarizeSelection(
+  selectedValues: string[],
+  options: SelectOption[],
+  allLabel: string,
+  countLabel: string
+): { value: string; isActive: boolean } {
+  if (!selectedValues.length || (options.length > 0 && selectedValues.length === options.length)) {
+    return { value: allLabel, isActive: false };
+  }
+
+  const labelsByValue = new Map(options.map((option) => [option.value, option.label]));
+  const labels = selectedValues.map((value) => labelsByValue.get(value) ?? value);
+  if (labels.length <= 2) return { value: labels.join(", "), isActive: true };
+
+  return { value: `Обрано ${countLabel}: ${labels.length}`, isActive: true };
+}
+
 export function InstitutionsPageClient() {
   const searchParams = useSearchParams();
   const queryString = searchParams.toString();
@@ -196,6 +213,86 @@ export function InstitutionsPageClient() {
   const handleMapDataChange = useCallback((nextData: RegionMapResponse | null) => {
     setMapSummary(nextData);
   }, []);
+  const mapFilterChips = useMemo(() => {
+    const institutionLevelOptions = [
+      { value: "1", label: "Вища освіта" },
+      { value: "9", label: "Фахова передвища освіта" }
+    ];
+    const regionOptions = filters?.regions.map((region) => ({ value: String(region.id), label: region.name })) ?? [];
+    const institutionOptions = filters?.selectedInstitutions.map((institution) => ({
+      value: String(institution.id),
+      label: institution.name
+    })) ?? [];
+    const fieldOptions = specialityCatalogSource.fields.map((field) => ({
+      value: field.code,
+      label: `${field.code} ${field.name}`
+    }));
+    const specialityOptions = filters?.specialities ?? [];
+    const educationLevelOptions = filters?.educationLevels ?? [];
+    const entryBaseOptions = filters?.entryBases ?? [];
+    const studyFormOptions = filters?.studyForms ?? [];
+
+    const chips = [
+      {
+        label: "Рівень освіти",
+        ...summarizeSelection(selectedInstitutionTypeCodes, institutionLevelOptions, "Усі рівні освіти", "рівнів освіти")
+      },
+      {
+        label: "Регіон",
+        ...summarizeSelection(regionIds.map(String), regionOptions, "Усі регіони", "регіонів")
+      },
+      {
+        label: "Заклад освіти",
+        ...summarizeSelection(selectedInstitutionIds.map(String), institutionOptions, "Усі заклади", "закладів")
+      },
+      {
+        label: "Галузь знань",
+        ...summarizeSelection(selectedFieldCodes, fieldOptions, "Усі галузі", "галузей")
+      },
+      {
+        label: "Спеціальність",
+        ...summarizeSelection(selectedSpecialityCodes, specialityOptions, "Усі спеціальності", "спеціальностей")
+      },
+      {
+        label: "Освітній ступінь",
+        ...summarizeSelection(selectedEducationLevelNames, educationLevelOptions, "Усі освітні ступені", "освітніх ступенів")
+      },
+      {
+        label: "Основа вступу",
+        ...summarizeSelection(selectedEntryBaseIds.map(String), entryBaseOptions, "Усі основи вступу", "основ вступу")
+      },
+      {
+        label: "Форма навчання",
+        ...summarizeSelection(selectedStudyFormIds.map(String), studyFormOptions, "Усі форми навчання", "форм навчання")
+      }
+    ];
+
+    if (showBlocked) {
+      chips.push({
+        label: "Заблоковані в ЄДЕБО",
+        value: "Показувати / враховувати",
+        isActive: true
+      });
+    }
+
+    return chips;
+  }, [
+    filters?.educationLevels,
+    filters?.entryBases,
+    filters?.regions,
+    filters?.selectedInstitutions,
+    filters?.specialities,
+    filters?.studyForms,
+    regionIds,
+    selectedEducationLevelNames,
+    selectedEntryBaseIds,
+    selectedFieldCodes,
+    selectedInstitutionIds,
+    selectedInstitutionTypeCodes,
+    selectedSpecialityCodes,
+    selectedStudyFormIds,
+    showBlocked
+  ]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -373,7 +470,12 @@ export function InstitutionsPageClient() {
         <SummarySkeleton />
       )}
 
-      <InteractiveEducationMap query={tableQuery} selectedRegionIds={regionIds} onDataChange={handleMapDataChange} />
+      <InteractiveEducationMap
+        query={tableQuery}
+        selectedRegionIds={regionIds}
+        filterChips={mapFilterChips}
+        onDataChange={handleMapDataChange}
+      />
 
       <InstitutionsTable
         key={tableQuery}

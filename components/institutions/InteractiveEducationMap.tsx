@@ -22,6 +22,12 @@ export type RegionMapResponse = {
   regions: RegionMapStat[];
 };
 
+export type MapFilterChip = {
+  label: string;
+  value: string;
+  isActive: boolean;
+};
+
 type RegionLabel = {
   x: number;
   y: number;
@@ -121,10 +127,12 @@ function parseUkraineSvg(svgText: string): SvgRegion[] {
 export function InteractiveEducationMap({
   query,
   selectedRegionIds,
+  filterChips,
   onDataChange
 }: {
   query: string;
   selectedRegionIds: number[];
+  filterChips: MapFilterChip[];
   onDataChange?: (data: RegionMapResponse | null) => void;
 }) {
   const [regions, setRegions] = useState<SvgRegion[]>([]);
@@ -201,6 +209,27 @@ export function InteractiveEducationMap({
           </div>
         </div>
       </div>
+
+      {filterChips.length ? (
+        <div className="mt-4 rounded-lg border border-brand-100 bg-brand-50/50 px-3 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Показано за фільтрами</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {filterChips.map((chip) => (
+              <span
+                key={chip.label}
+                className={
+                  chip.isActive
+                    ? "inline-flex items-center gap-1 rounded-md border border-brand-200 bg-white px-2.5 py-1 text-xs text-brand-800"
+                    : "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600"
+                }
+              >
+                <span className="font-semibold">{chip.label}:</span>
+                <span>{chip.value}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {error ? <p className="mt-4 rounded-md border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
       {!regions.length || !data ? (
