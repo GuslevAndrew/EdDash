@@ -269,7 +269,7 @@ export function InteractiveEducationMap({
                   >
                     <title>
                       {ukrainianName}
-                      {stat ? `: ${formatNumber(stat.institutionsCount)} закладів, ${formatNumber(stat.studentsCount)} осіб` : ""}
+                      {stat ? `, закладів - ${formatNumber(stat.institutionsCount)}, осіб - ${formatNumber(stat.studentsCount)}` : ""}
                     </title>
                   </path>
                 );
