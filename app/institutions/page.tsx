@@ -6,7 +6,7 @@ import { InstitutionsPageClient } from "@/components/institutions/InstitutionsPa
 export const metadata: Metadata = {
   title: "EdМапа",
   description:
-    "Інтерактивна карта і таблиця закладів вищої та фахової передвищої освіти України на основі відкритих даних ЄДЕБО.",
+    "Інтерактивна карта і таблиця закладів вищої та/або фахової передвищої освіти України на основі відкритих даних ЄДЕБО.",
   alternates: {
     canonical: "/institutions"
   }
@@ -21,7 +21,7 @@ function InstitutionsShellFallback() {
         </p>
         <h1 className="mt-3 text-3xl font-bold text-ink">EdМапа</h1>
         <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-600">
-          Інтерактивна карта і таблиця закладів вищої та фахової передвищої освіти на основі відкритих даних ЄДЕБО.
+          Інтерактивна карта і таблиця закладів вищої та/або фахової передвищої освіти на основі відкритих даних ЄДЕБО.
         </p>
       </section>
       <section className="rounded-lg border border-line bg-white p-5 shadow-soft">
