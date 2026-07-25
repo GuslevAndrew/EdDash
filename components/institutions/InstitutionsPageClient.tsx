@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { InteractiveEducationMap } from "@/components/institutions/InteractiveEducationMap";
 import { InstitutionsTable } from "@/components/institutions/InstitutionsTable";
 import { InstitutionMultiSelect } from "@/components/ui/InstitutionMultiSelect";
 import { LoadingNotice } from "@/components/ui/LoadingNotice";
@@ -362,6 +363,8 @@ export function InstitutionsPageClient() {
       ) : (
         <SummarySkeleton />
       )}
+
+      <InteractiveEducationMap query={tableQuery} selectedRegionIds={regionIds} />
 
       <InstitutionsTable
         key={tableQuery}
