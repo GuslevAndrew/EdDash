@@ -19,7 +19,8 @@ export function RegionFilter({ regions, selectedRegionIds }: RegionFilterProps) 
 
   const allSelected = regions.length > 0 && regions.every((region) => selectedIds.includes(String(region.id)));
   const label = useMemo(() => {
-    if (!selectedIds.length || allSelected) return "Оберіть регіон";
+    if (allSelected) return "Усі регіони";
+    if (!selectedIds.length) return "Оберіть регіон";
     const names = regions.filter((region) => selectedIds.includes(String(region.id))).map((region) => region.name);
     if (names.length <= 2) return names.join(", ");
     return `Обрано регіонів: ${names.length}`;
