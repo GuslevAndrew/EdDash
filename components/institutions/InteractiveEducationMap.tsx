@@ -287,7 +287,6 @@ export function InteractiveEducationMap({
           <span className="h-3 w-6 rounded-sm bg-brand-100" /> Менше значення
         </span>
         <span>Перша цифра - заклади освіти, друга - контингент.</span>
-        <span>Основа карти: SVG Maps Ukraine.</span>
       </div>
     </section>
   );
