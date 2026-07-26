@@ -46,7 +46,6 @@ async function getCompleteSnapshotDates(): Promise<Date[]> {
   const dates = await prisma.studentSnapshot.groupBy({
     by: ["snapshotDate"],
     where: {
-      studyForm: { code: "total" },
       institution: { blockedAt: null }
     },
     _count: { _all: true },
@@ -61,7 +60,6 @@ async function getCompleteSnapshotDates(): Promise<Date[]> {
 export async function getFilterOptions() {
   const [
     dateRows,
-    datesWithStudyFormRows,
     years,
     regions,
     institutions,
@@ -73,21 +71,13 @@ export async function getFilterOptions() {
     prisma.studentSnapshot.groupBy({
       by: ["snapshotDate"],
       where: {
-        studyForm: { code: "total" },
         institution: { blockedAt: null }
       },
       _count: { _all: true },
       orderBy: { snapshotDate: "desc" }
     }),
-    prisma.studentSnapshot.groupBy({
-      by: ["snapshotDate"],
-      where: { studyForm: { code: { not: "total" } } },
-      _count: { _all: true },
-      orderBy: { snapshotDate: "desc" }
-    }),
-    prisma.yearlyOutcome.findMany({
-      distinct: ["year"],
-      select: { year: true },
+    prisma.yearlyOutcome.groupBy({
+      by: ["year"],
       orderBy: { year: "desc" }
     }),
     prisma.region.findMany({ orderBy: { name: "asc" } }),
@@ -108,13 +98,9 @@ export async function getFilterOptions() {
   const dates = dateRows
     .filter((item) => (typeof item._count === "object" ? item._count._all ?? 0 : 0) >= MIN_COMPLETE_SNAPSHOT_ROWS)
     .map((item) => item.snapshotDate);
-  const datesWithStudyForms = datesWithStudyFormRows
-    .filter((item) => (typeof item._count === "object" ? item._count._all ?? 0 : 0) > 0)
-    .map((item) => item.snapshotDate);
-
   return {
     dates: dates.map((date) => date.toISOString()),
-    datesWithStudyForms: datesWithStudyForms.map((date) => date.toISOString()),
+    datesWithStudyForms: dates.map((date) => date.toISOString()),
     years: years.map((item) => item.year),
     institutionTypes: [
       { code: "1", name: "Заклади вищої освіти" },
@@ -417,16 +403,23 @@ async function yearlyTotalsByRegionAcrossYears(
 }
 
 async function countYearlyCanonicalSpecialities(where: Prisma.YearlyOutcomeWhereInput): Promise<number> {
-  const rows = await prisma.yearlyOutcome.findMany({
-    where,
-    distinct: ["specialityId"],
+  const grouped = await prisma.yearlyOutcome.groupBy({
+    by: ["specialityId"],
+    where
+  });
+  const specialityIds = grouped.map((item) => item.specialityId);
+  if (!specialityIds.length) return 0;
+
+  const rows = await prisma.speciality.findMany({
+    where: { id: { in: specialityIds } },
     select: {
-      specialityId: true,
-      speciality: { select: { code: true, canonicalCode: true } }
+      id: true,
+      code: true,
+      canonicalCode: true
     }
   });
 
-  return new Set(rows.map((row) => row.speciality.canonicalCode ?? row.speciality.code ?? String(row.specialityId))).size;
+  return new Set(rows.map((row) => row.canonicalCode ?? row.code ?? String(row.id))).size;
 }
 
 async function totalsByRelation(
@@ -469,7 +462,8 @@ async function totalsByRelation(
 
 async function totalsByInstitutionAcrossSnapshotDates(
   where: Prisma.StudentSnapshotWhereInput,
-  snapshotDates: string[]
+  snapshotDates: string[],
+  take?: number
 ): Promise<InstitutionDateTotal[]> {
   const selectedDates = [...new Set(snapshotDates)]
     .map((date) => new Date(date))
@@ -480,7 +474,7 @@ async function totalsByInstitutionAcrossSnapshotDates(
     return totalsByRelation("institutionId", {
       ...where,
       snapshotDate: selectedDates[0] ?? where.snapshotDate
-    });
+    }, take);
   }
 
   const grouped = await prisma.studentSnapshot.groupBy({
@@ -507,7 +501,7 @@ async function totalsByInstitutionAcrossSnapshotDates(
     groupedByInstitution.set(item.institutionId, institutionMap);
   }
 
-  return [...groupedByInstitution.entries()]
+  const sorted = [...groupedByInstitution.entries()]
     .map(([institutionId, valuesByDate]) => {
       const series = selectedDates.map((date) => ({
         label: date.toISOString(),
@@ -522,6 +516,8 @@ async function totalsByInstitutionAcrossSnapshotDates(
       };
     })
     .sort((first, second) => second.value - first.value);
+
+  return take ? sorted.slice(0, take) : sorted;
 }
 
 async function grandTotalAcrossSnapshotDates(
@@ -1242,16 +1238,23 @@ async function getYearlyOutcomeEducationLevelBreakdowns(filters: Partial<Dashboa
 }
 
 async function countCanonicalSpecialities(where: Prisma.StudentSnapshotWhereInput): Promise<number> {
-  const rows = await prisma.studentSnapshot.findMany({
-    where,
-    distinct: ["specialityId"],
+  const grouped = await prisma.studentSnapshot.groupBy({
+    by: ["specialityId"],
+    where
+  });
+  const specialityIds = grouped.map((item) => item.specialityId);
+  if (!specialityIds.length) return 0;
+
+  const rows = await prisma.speciality.findMany({
+    where: { id: { in: specialityIds } },
     select: {
-      specialityId: true,
-      speciality: { select: { code: true, canonicalCode: true } }
+      id: true,
+      code: true,
+      canonicalCode: true
     }
   });
 
-  return new Set(rows.map((row) => row.speciality.canonicalCode ?? row.speciality.code ?? String(row.specialityId))).size;
+  return new Set(rows.map((row) => row.canonicalCode ?? row.code ?? String(row.id))).size;
 }
 
 function getSameDatePreviousYear(value: string): Date {
@@ -1624,12 +1627,10 @@ async function getStudentDynamicsBreakdowns(
 export async function getDashboardSummary(filters: Partial<DashboardFiltersInput>) {
   if (filters.datasetType === "entrants" || filters.datasetType === "graduates") {
     const where = buildYearlyOutcomeWhere(filters);
-    const [persons, institutions, specialitiesCount, regions] = await Promise.all([
-      prisma.yearlyOutcome.aggregate({ where, _sum: { personsCount: true } }),
-      prisma.yearlyOutcome.findMany({ where, distinct: ["institutionId"], select: { institutionId: true } }),
-      countYearlyCanonicalSpecialities(where),
-      prisma.yearlyOutcome.findMany({ where, distinct: ["regionId"], select: { regionId: true } })
-    ]);
+    const persons = await prisma.yearlyOutcome.aggregate({ where, _sum: { personsCount: true } });
+    const institutions = await prisma.yearlyOutcome.groupBy({ by: ["institutionId"], where });
+    const specialitiesCount = await countYearlyCanonicalSpecialities(where);
+    const regions = await prisma.yearlyOutcome.groupBy({ by: ["regionId"], where });
 
     let previousDelta: number | null = null;
     const selectedYears = filters.years?.length ? filters.years : filters.year ? [filters.year] : [];
@@ -1638,10 +1639,8 @@ export async function getDashboardSummary(filters: Partial<DashboardFiltersInput
       const previousWhere = { ...where, year: selectedYear - 1 };
       const previousRowsCount = await prisma.yearlyOutcome.count({ where: previousWhere });
       if (previousRowsCount > 0) {
-        const [currentTotal, previousTotal] = await Promise.all([
-          prisma.yearlyOutcome.aggregate({ where, _sum: { personsCount: true } }),
-          prisma.yearlyOutcome.aggregate({ where: previousWhere, _sum: { personsCount: true } })
-        ]);
+        const currentTotal = await prisma.yearlyOutcome.aggregate({ where, _sum: { personsCount: true } });
+        const previousTotal = await prisma.yearlyOutcome.aggregate({ where: previousWhere, _sum: { personsCount: true } });
         previousDelta = (currentTotal._sum.personsCount ?? 0) - (previousTotal._sum.personsCount ?? 0);
       }
     }
@@ -1656,12 +1655,10 @@ export async function getDashboardSummary(filters: Partial<DashboardFiltersInput
   }
 
   const where = buildSnapshotWhere(filters);
-  const [students, institutions, specialitiesCount, regions] = await Promise.all([
-    prisma.studentSnapshot.aggregate({ where, _sum: { studentsCount: true } }),
-    prisma.studentSnapshot.findMany({ where, distinct: ["institutionId"], select: { institutionId: true } }),
-    countCanonicalSpecialities(where),
-    prisma.studentSnapshot.findMany({ where, distinct: ["regionId"], select: { regionId: true } })
-  ]);
+  const students = await prisma.studentSnapshot.aggregate({ where, _sum: { studentsCount: true } });
+  const institutions = await prisma.studentSnapshot.groupBy({ by: ["institutionId"], where });
+  const specialitiesCount = await countCanonicalSpecialities(where);
+  const regions = await prisma.studentSnapshot.groupBy({ by: ["regionId"], where });
 
   let previousDelta: number | null = null;
   if (filters.snapshotDate) {
@@ -1672,10 +1669,8 @@ export async function getDashboardSummary(filters: Partial<DashboardFiltersInput
     if (hasCompletePreviousSnapshot) {
       const previousWhere = { ...where, snapshotDate: previousSnapshotDate };
       const currentWhere = { ...where };
-      const [currentTotal, previousTotal] = await Promise.all([
-        prisma.studentSnapshot.aggregate({ where: currentWhere, _sum: { studentsCount: true } }),
-        prisma.studentSnapshot.aggregate({ where: previousWhere, _sum: { studentsCount: true } })
-      ]);
+      const currentTotal = await prisma.studentSnapshot.aggregate({ where: currentWhere, _sum: { studentsCount: true } });
+      const previousTotal = await prisma.studentSnapshot.aggregate({ where: previousWhere, _sum: { studentsCount: true } });
       previousDelta = (currentTotal._sum.studentsCount ?? 0) - (previousTotal._sum.studentsCount ?? 0);
     }
   }
@@ -1746,7 +1741,7 @@ export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>
     });
 
     const [topInstitutions, topInstitutionsTotal, regions, fields, educationLevels, educationLevelBreakdowns] = await Promise.all([
-      yearlyTotalsByRelationAcrossYears("institutionId", institutionChartWhere, selectedYears),
+      yearlyTotalsByRelationAcrossYears("institutionId", institutionChartWhere, selectedYears, 250),
       yearlyGrandTotalAcrossYears(institutionTotalWhere, selectedYears),
       yearlyTotalsByRegionAcrossYears(regionChartWhere, regionSelectedInstitutionWhere, selectedYears, selectedRegionIds),
       yearlyTotalsByFieldWithSelectedSpecialities(fieldChartWhere, fieldSelectedSpecialityWhere, selectedFieldCodes, selectedYears),
@@ -1835,7 +1830,7 @@ export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>
   const selectedRegionIds = filters.regionIds?.length ? filters.regionIds : filters.regionId ? [filters.regionId] : [];
   const selectedFieldCodes = filters.fieldCodes?.length ? filters.fieldCodes : filters.fieldCode ? [filters.fieldCode] : [];
   const [topInstitutions, topInstitutionsTotal, regions, fields, educationLevels, educationLevelBreakdowns] = await Promise.all([
-    totalsByInstitutionAcrossSnapshotDates(institutionChartWhere, institutionSnapshotDates),
+    totalsByInstitutionAcrossSnapshotDates(institutionChartWhere, institutionSnapshotDates, 250),
     grandTotalAcrossSnapshotDates(institutionTotalWhere, institutionSnapshotDates),
     totalsByRegionAcrossSnapshotDates(regionChartWhere, regionSelectedInstitutionWhere, selectedSnapshotDates, selectedRegionIds),
     totalsByFieldWithSelectedSpecialities(fieldChartWhere, fieldSelectedSpecialityWhere, selectedFieldCodes, selectedSnapshotDates),

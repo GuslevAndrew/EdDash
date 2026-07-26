@@ -48,7 +48,7 @@ export function buildSnapshotWhere(filters: Partial<DashboardFiltersInput>): Pri
     educationLevelId: educationLevelNameVariants.length ? undefined : filters.educationLevelId,
     entryBaseId: entryBaseIds.length ? { in: entryBaseIds } : undefined,
     studyFormId: studyFormIds.length ? { in: studyFormIds } : undefined,
-    studyForm: studyFormIds.length ? undefined : { code: "total" }
+    studyForm: studyFormIds.length ? undefined : { code: { not: "total" } }
   };
 }
 
