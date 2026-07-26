@@ -82,6 +82,18 @@ function chunk<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
+function uniqueBy<T>(items: T[], getKey: (item: T) => string): T[] {
+  const seen = new Set<string>();
+  const unique: T[] = [];
+  for (const item of items) {
+    const key = getKey(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(item);
+  }
+  return unique;
+}
+
 function getEndpoint(type: YearlyOutcomeType): string {
   return type === "entrants" ? EDBO_ENDPOINTS.entrants : EDBO_ENDPOINTS.graduates;
 }
@@ -117,113 +129,131 @@ export async function importYearlyOutcomes(options: ImportYearlyOutcomesOptions)
     let updated = 0;
     let skipped = 0;
 
-    const regionsByName = new Map<string, Awaited<ReturnType<typeof prisma.region.upsert>>>();
-    for (const row of rows) {
-      if (regionsByName.has(row.regionName)) continue;
-      const region = await prisma.region.upsert({
-        where: { name: row.regionName },
-        update: { externalId: row.regionExternalId, code: row.regionCode },
-        create: { externalId: row.regionExternalId, code: row.regionCode, name: row.regionName }
-      });
-      regionsByName.set(row.regionName, region);
-    }
+    const uniqueRegions = uniqueBy(rows, (row) => row.regionName);
+    await prisma.region.createMany({
+      data: uniqueRegions.map((row) => ({ externalId: row.regionExternalId, code: row.regionCode, name: row.regionName })),
+      skipDuplicates: true
+    });
+    const regionsByName = new Map(
+      (
+        await prisma.region.findMany({
+          where: { name: { in: uniqueRegions.map((row) => row.regionName) } }
+        })
+      ).map((region) => [region.name, region])
+    );
 
-    const institutionsByKey = new Map<string, Awaited<ReturnType<typeof prisma.institution.upsert>>>();
-    for (const row of rows) {
-      const key = row.institutionExternalId ?? `name:${row.institutionName}`;
-      if (institutionsByKey.has(key)) continue;
-      const fallbackInstitutionType =
-        row.educationLevelCode === "9" ? INSTITUTION_TYPES.professionalPreHigher : INSTITUTION_TYPES.higher;
-      const region = regionsByName.get(row.regionName);
-      if (!region) throw new Error(`Не знайдено регіон для ${row.regionName}`);
-      const institution = await prisma.institution.upsert({
-        where: { externalId: key },
-        update: { name: row.institutionName, shortName: row.institutionShortName, regionId: region.id },
-        create: {
+    const uniqueEducationLevels = uniqueBy(rows, (row) => row.educationLevelCode);
+    await prisma.educationLevel.createMany({
+      data: uniqueEducationLevels.map((row) => ({ code: row.educationLevelCode, name: row.educationLevelName })),
+      skipDuplicates: true
+    });
+    const educationLevelsByCode = new Map(
+      (
+        await prisma.educationLevel.findMany({
+          where: { code: { in: uniqueEducationLevels.map((row) => row.educationLevelCode) } }
+        })
+      ).map((educationLevel) => [educationLevel.code, educationLevel])
+    );
+
+    const uniqueEntryBases = uniqueBy(rows, (row) => row.entryBaseCode);
+    await prisma.entryBase.createMany({
+      data: uniqueEntryBases.map((row) => ({ code: row.entryBaseCode, name: row.entryBaseName })),
+      skipDuplicates: true
+    });
+    const entryBasesByCode = new Map(
+      (
+        await prisma.entryBase.findMany({
+          where: { code: { in: uniqueEntryBases.map((row) => row.entryBaseCode) } }
+        })
+      ).map((entryBase) => [entryBase.code, entryBase])
+    );
+
+    const uniqueStudyForms = uniqueBy(
+      rows.filter((row) => row.studyFormCode && row.studyFormName),
+      (row) => row.studyFormCode ?? ""
+    );
+    if (uniqueStudyForms.length) {
+      await prisma.studyForm.createMany({
+        data: uniqueStudyForms.map((row) => ({ code: row.studyFormCode ?? "", name: row.studyFormName ?? "" })),
+        skipDuplicates: true
+      });
+    }
+    const studyFormsByCode = new Map(
+      uniqueStudyForms.length
+        ? (
+            await prisma.studyForm.findMany({
+              where: { code: { in: uniqueStudyForms.map((row) => row.studyFormCode ?? "") } }
+            })
+          ).map((studyForm) => [studyForm.code, studyForm])
+        : []
+    );
+
+    const uniqueSpecialities = uniqueBy(rows, (row) => row.specialityCode ?? `name:${row.specialityName}`);
+    await prisma.speciality.createMany({
+      data: uniqueSpecialities.map((row) => {
+        const canonical = getCanonicalSpeciality({ code: row.specialityCode, name: row.specialityName });
+        const canonicalData = canonical.source === "unmapped"
+          ? {
+              canonicalCode: null,
+              canonicalName: null,
+              canonicalFieldCode: null,
+              canonicalFieldName: null,
+              canonicalSource: canonical.source
+            }
+          : {
+              canonicalCode: canonical.code,
+              canonicalName: canonical.name,
+              canonicalFieldCode: canonical.fieldCode,
+              canonicalFieldName: canonical.fieldName,
+              canonicalSource: canonical.source
+            };
+
+        return {
+          externalId: row.specialityExternalId,
+          code: row.specialityCode ?? `name:${row.specialityName}`,
+          name: row.specialityName,
+          fieldCode: row.fieldCode,
+          fieldName: row.fieldName,
+          ...canonicalData
+        };
+      }),
+      skipDuplicates: true
+    });
+    const specialitiesByKey = new Map(
+      (
+        await prisma.speciality.findMany({
+          where: { code: { in: uniqueSpecialities.map((row) => row.specialityCode ?? `name:${row.specialityName}`) } }
+        })
+      ).map((speciality) => [speciality.code ?? `id:${speciality.id}`, speciality])
+    );
+
+    const uniqueInstitutions = uniqueBy(rows, (row) => row.institutionExternalId ?? `name:${row.institutionName}`);
+    await prisma.institution.createMany({
+      data: uniqueInstitutions.map((row) => {
+        const key = row.institutionExternalId ?? `name:${row.institutionName}`;
+        const fallbackInstitutionType =
+          row.educationLevelCode === "9" ? INSTITUTION_TYPES.professionalPreHigher : INSTITUTION_TYPES.higher;
+        const region = regionsByName.get(row.regionName);
+        if (!region) throw new Error(`Не знайдено регіон для ${row.regionName}`);
+
+        return {
           externalId: key,
           name: row.institutionName,
           shortName: row.institutionShortName,
           institutionTypeCode: fallbackInstitutionType.code,
           institutionTypeName: fallbackInstitutionType.name,
           regionId: region.id
-        }
-      });
-      institutionsByKey.set(key, institution);
-    }
-
-    const specialitiesByKey = new Map<string, Awaited<ReturnType<typeof prisma.speciality.upsert>>>();
-    for (const row of rows) {
-      const key = row.specialityCode ?? `name:${row.specialityName}`;
-      if (specialitiesByKey.has(key)) continue;
-      const canonical = getCanonicalSpeciality({ code: row.specialityCode, name: row.specialityName });
-      const canonicalData = canonical.source === "unmapped"
-        ? {
-            canonicalCode: null,
-            canonicalName: null,
-            canonicalFieldCode: null,
-            canonicalFieldName: null,
-            canonicalSource: canonical.source
-          }
-        : {
-            canonicalCode: canonical.code,
-            canonicalName: canonical.name,
-            canonicalFieldCode: canonical.fieldCode,
-            canonicalFieldName: canonical.fieldName,
-            canonicalSource: canonical.source
-          };
-      const speciality = await prisma.speciality.upsert({
-        where: { code: key },
-        update: {
-          name: row.specialityName,
-          externalId: row.specialityExternalId,
-          fieldCode: row.fieldCode,
-          fieldName: row.fieldName,
-          ...canonicalData
-        },
-        create: {
-          externalId: row.specialityExternalId,
-          code: key,
-          name: row.specialityName,
-          fieldCode: row.fieldCode,
-          fieldName: row.fieldName,
-          ...canonicalData
-        }
-      });
-      specialitiesByKey.set(key, speciality);
-    }
-
-    const educationLevelsByCode = new Map<string, Awaited<ReturnType<typeof prisma.educationLevel.upsert>>>();
-    for (const row of rows) {
-      if (educationLevelsByCode.has(row.educationLevelCode)) continue;
-      const educationLevel = await prisma.educationLevel.upsert({
-        where: { code: row.educationLevelCode },
-        update: { name: row.educationLevelName },
-        create: { code: row.educationLevelCode, name: row.educationLevelName }
-      });
-      educationLevelsByCode.set(row.educationLevelCode, educationLevel);
-    }
-
-    const entryBasesByCode = new Map<string, Awaited<ReturnType<typeof prisma.entryBase.upsert>>>();
-    for (const row of rows) {
-      if (entryBasesByCode.has(row.entryBaseCode)) continue;
-      const entryBase = await prisma.entryBase.upsert({
-        where: { code: row.entryBaseCode },
-        update: { name: row.entryBaseName },
-        create: { code: row.entryBaseCode, name: row.entryBaseName }
-      });
-      entryBasesByCode.set(row.entryBaseCode, entryBase);
-    }
-
-    const studyFormsByCode = new Map<string, Awaited<ReturnType<typeof prisma.studyForm.upsert>>>();
-    for (const row of rows) {
-      if (!row.studyFormCode || !row.studyFormName || studyFormsByCode.has(row.studyFormCode)) continue;
-      const studyForm = await prisma.studyForm.upsert({
-        where: { code: row.studyFormCode },
-        update: { name: row.studyFormName },
-        create: { code: row.studyFormCode, name: row.studyFormName }
-      });
-      studyFormsByCode.set(row.studyFormCode, studyForm);
-    }
+        };
+      }),
+      skipDuplicates: true
+    });
+    const institutionsByKey = new Map(
+      (
+        await prisma.institution.findMany({
+          where: { externalId: { in: uniqueInstitutions.map((row) => row.institutionExternalId ?? `name:${row.institutionName}`) } }
+        })
+      ).map((institution) => [institution.externalId ?? `id:${institution.id}`, institution])
+    );
 
     const preparedRows = rows.map((row) => {
       const institution = institutionsByKey.get(row.institutionExternalId ?? `name:${row.institutionName}`);
