@@ -83,7 +83,7 @@ export async function GET(request: Request) {
       educationLevelId: selectedEducationLevelIds.length ? { in: selectedEducationLevelIds } : undefined,
       entryBaseId: parsed.entryBase.length ? { in: parsed.entryBase } : undefined,
       studyFormId: parsed.studyForm.length ? { in: parsed.studyForm } : undefined,
-      studyForm: parsed.studyForm.length ? undefined : { code: "total" }
+      studyForm: parsed.studyForm.length ? undefined : { code: { not: "total" } }
     };
 
     const regionRows = hasStudentDetailFilters
