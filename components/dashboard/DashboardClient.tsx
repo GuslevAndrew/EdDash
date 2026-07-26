@@ -386,12 +386,13 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-ink">Дашборд: {datasetLabels[filters.datasetType]}</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+      <section className="mb-6 rounded-lg border border-line bg-white p-6 shadow-soft">
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand-700">Аналітика відкритих освітніх даних</p>
+        <h1 className="mt-3 text-3xl font-bold text-ink">Дашборд: {datasetLabels[filters.datasetType]}</h1>
+        <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-600">
           {datasetDescriptions[filters.datasetType]}
         </p>
-      </div>
+      </section>
 
       <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="Стан навчання">
         {datasetTabs.map((tab) => {
