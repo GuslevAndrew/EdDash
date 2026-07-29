@@ -298,9 +298,10 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
     const controller = new AbortController();
     const search = new URLSearchParams(params);
     for (const breakdown of missingBreakdowns) search.append("breakdown", breakdown);
+    search.set("refresh", String(Date.now()));
 
     setIsDynamicsBreakdownLoading(true);
-    fetch(`/api/dashboard/dynamics-breakdowns?${search.toString()}`, { signal: controller.signal })
+    fetch(`/api/dashboard/dynamics-breakdowns?${search.toString()}`, { cache: "no-store", signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Dynamics breakdown request failed");
         return response.json() as Promise<Partial<Record<DynamicsBreakdownValue, DynamicsSeries[]>>>;
