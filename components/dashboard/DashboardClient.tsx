@@ -214,7 +214,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
   useEffect(() => {
     if (initialOptions) return;
 
-    fetch("/api/filters")
+    fetch(`/api/filters?refresh=${Date.now()}`, { cache: "no-store" })
       .then((response) => response.json())
       .then((data: FilterOptions) => {
         setOptions(data);
