@@ -105,7 +105,7 @@ export async function importEducators(options: ImportEducatorsOptions): Promise<
       params: { ...parsedOptions, exp: "json" },
       retries: 2,
       retryDelayMs: 1500,
-      timeoutMs: 15000
+      timeoutMs: 60000
     });
     const normalizedRows = normalizeEducators(payload, parsedOptions);
     const rows = aggregateRows(normalizedRows);
