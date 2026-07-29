@@ -1455,8 +1455,11 @@ async function getYearlyOutcomeDynamicsBreakdowns(
   if (requested.has("specialities")) result.specialities = buildYearlyDynamicSeries(specialityRows, specialityNames, years, 8, "speciality");
   if (requested.has("educationLevels")) {
     result.educationLevels = buildYearlyDynamicSeries(
-      educationLevelGrouped.map((item) => ({ key: item.educationLevelId, year: item.year, value: item._sum.personsCount ?? 0 })),
-      educationLevelNames,
+      educationLevelGrouped.map((item) => {
+        const name = educationLevelNames.get(item.educationLevelId) ?? "РќРµРІС–РґРѕРјРѕ";
+        return { key: name, year: item.year, value: item._sum.personsCount ?? 0 };
+      }),
+      new Map([...new Set(educationLevelNames.values())].map((name) => [name, name])),
       years,
       8,
       "education-level"
@@ -1600,8 +1603,11 @@ async function getStudentDynamicsBreakdowns(
   if (requested.has("specialities")) result.specialities = buildDynamicSeries(specialityRows, specialityNames, dates, 8, "speciality");
   if (requested.has("educationLevels")) {
     result.educationLevels = buildDynamicSeries(
-      educationLevelGrouped.map((item) => ({ key: item.educationLevelId, snapshotDate: item.snapshotDate, value: item._sum.studentsCount ?? 0 })),
-      educationLevelNames,
+      educationLevelGrouped.map((item) => {
+        const name = educationLevelNames.get(item.educationLevelId) ?? "РќРµРІС–РґРѕРјРѕ";
+        return { key: name, snapshotDate: item.snapshotDate, value: item._sum.studentsCount ?? 0 };
+      }),
+      new Map([...new Set(educationLevelNames.values())].map((name) => [name, name])),
       dates,
       8,
       "education-level"
