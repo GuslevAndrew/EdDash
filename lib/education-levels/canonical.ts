@@ -40,11 +40,13 @@ export function getEducationLevelNameVariants(canonicalName: string): string[] {
   if (canonicalName === "Магістр") {
     variants.add("Магістр");
     variants.add("Спеціаліст");
+    variants.add("Магістр/спеціаліст");
   }
   if (canonicalName === "Фаховий молодший бакалавр") {
     variants.add("Фаховий молодший бакалавр");
     variants.add("Молодший бакалавр");
     variants.add("Молодший спеціаліст");
+    variants.add("Фаховий молодший бакалавр/молодший бакалавр/молодший спеціаліст");
   }
   return [...variants];
 }
