@@ -272,7 +272,7 @@ export function DashboardFilters({
             options={yearOptions}
             selectedValues={draft.years.length ? draft.years : draft.year ? [draft.year] : []}
             onChange={changeYears}
-            onReset={() => changeYears(options?.years[0] ? [String(options.years[0])] : [])}
+            onReset={() => changeYears(yearOptions[0] ? [yearOptions[0].value] : [])}
           />
         )}
         <SearchableMultiSelect

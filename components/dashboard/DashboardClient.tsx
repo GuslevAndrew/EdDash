@@ -267,7 +267,9 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
       setIsSummaryLoading(true);
       setMessage(null);
       try {
-        const summaryResponse = await fetch(`/api/dashboard/summary?${params.toString()}`);
+        const summaryParams = new URLSearchParams(params);
+        summaryParams.set("refresh", String(Date.now()));
+        const summaryResponse = await fetch(`/api/dashboard/summary?${summaryParams.toString()}`, { cache: "no-store" });
         if (!summaryResponse.ok) throw new Error("Dashboard summary API returned an error");
         const summaryData = await summaryResponse.json();
         if (!active) return;
@@ -283,7 +285,9 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
       setIsChartsLoading(true);
       setMessage(null);
       try {
-        const chartsResponse = await fetch(`/api/dashboard/charts?${params.toString()}`);
+        const chartsParams = new URLSearchParams(params);
+        chartsParams.set("refresh", String(Date.now()));
+        const chartsResponse = await fetch(`/api/dashboard/charts?${chartsParams.toString()}`, { cache: "no-store" });
         if (!chartsResponse.ok) throw new Error("Dashboard charts API returned an error");
         const chartsData = await chartsResponse.json();
         if (!active) return;
