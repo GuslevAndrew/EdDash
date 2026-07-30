@@ -33,7 +33,14 @@ async function main() {
             canonicalFieldName: canonical.fieldName,
             canonicalSource: canonical.source
           };
-      const existing = await prisma.speciality.findFirst({ where: { OR: [{ code: speciality.code }, { externalId: speciality.externalId }, { name: speciality.name }] } });
+      const existing = await prisma.speciality.findFirst({
+        where: {
+          OR: [
+            ...(speciality.code ? [{ code: speciality.code }] : []),
+            ...(speciality.externalId ? [{ externalId: speciality.externalId }] : [])
+          ]
+        }
+      });
       if (existing) {
         await prisma.speciality.update({ where: { id: existing.id }, data: { ...speciality, ...canonicalData } });
         updated += 1;

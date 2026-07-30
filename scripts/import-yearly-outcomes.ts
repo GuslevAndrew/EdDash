@@ -295,24 +295,13 @@ export async function importYearlyOutcomes(
 
     const detailedRows = preparedRows.filter((row) => row.studyFormId !== null);
     if (detailedRows.length) {
-      const staleTotalKeys = new Set<string>();
-      for (const row of detailedRows) {
-        staleTotalKeys.add([row.type, row.year, row.institutionId, row.specialityId, row.educationLevelId, row.entryBaseId].join("|"));
-      }
-      for (const key of staleTotalKeys) {
-        const [type, year, institutionId, specialityId, educationLevelId, entryBaseId] = key.split("|");
-        await prisma.yearlyOutcome.deleteMany({
-          where: {
-            type,
-            year: Number(year),
-            institutionId: Number(institutionId),
-            specialityId: Number(specialityId),
-            educationLevelId: Number(educationLevelId),
-            entryBaseId: Number(entryBaseId),
-            studyFormId: null
-          }
-        });
-      }
+      await prisma.yearlyOutcome.deleteMany({
+        where: {
+          type: options.type,
+          year: { in: [...new Set(detailedRows.map((row) => row.year))] },
+          studyFormId: null
+        }
+      });
     }
 
     const existingRows = await prisma.yearlyOutcome.findMany({
@@ -359,14 +348,12 @@ export async function importYearlyOutcomes(
     }
 
     for (const batch of chunk(toUpdate, 100)) {
-      await Promise.all(
-        batch.map((row) =>
-          prisma.yearlyOutcome.update({
-            where: { id: row.id },
-            data: { personsCount: row.personsCount, sourceHash: row.sourceHash, regionId: row.regionId, studyFormId: row.studyFormId }
-          })
-        )
-      );
+      for (const row of batch) {
+        await prisma.yearlyOutcome.update({
+          where: { id: row.id },
+          data: { personsCount: row.personsCount, sourceHash: row.sourceHash, regionId: row.regionId, studyFormId: row.studyFormId }
+        });
+      }
       updated += batch.length;
     }
 
