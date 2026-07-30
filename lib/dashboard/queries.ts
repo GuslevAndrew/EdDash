@@ -77,8 +77,8 @@ export async function getFilterOptions() {
       orderBy: { snapshotDate: "desc" }
     }),
     prisma.yearlyOutcome.groupBy({
-      by: ["year"],
-      orderBy: { year: "desc" }
+      by: ["type", "year"],
+      orderBy: [{ type: "asc" }, { year: "desc" }]
     }),
     prisma.region.findMany({ orderBy: { name: "asc" } }),
     prisma.institution.findMany({
@@ -101,7 +101,17 @@ export async function getFilterOptions() {
   return {
     dates: dates.map((date) => date.toISOString()),
     datesWithStudyForms: dates.map((date) => date.toISOString()),
-    years: years.map((item) => item.year),
+    years: [...new Set(years.map((item) => item.year))].sort((first, second) => second - first),
+    yearsByDataset: {
+      entrants: years
+        .filter((item) => item.type === "entrants")
+        .map((item) => item.year)
+        .sort((first, second) => second - first),
+      graduates: years
+        .filter((item) => item.type === "graduates")
+        .map((item) => item.year)
+        .sort((first, second) => second - first)
+    },
     institutionTypes: [
       { code: "1", name: "Заклади вищої освіти" },
       { code: "9", name: "Заклади фахової передвищої освіти" }

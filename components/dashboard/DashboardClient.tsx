@@ -86,6 +86,19 @@ function getInitialFilters(options: FilterOptions | null): DashboardFilterState 
   };
 }
 
+function getAvailableYears(options: FilterOptions | null, datasetType: DashboardFilterState["datasetType"]): number[] {
+  if (datasetType === "students") return [];
+  return options?.yearsByDataset?.[datasetType] ?? options?.years ?? [];
+}
+
+function getLatestYearFilters(options: FilterOptions | null, datasetType: DashboardFilterState["datasetType"]) {
+  const year = getAvailableYears(options, datasetType)[0];
+  return {
+    year: year ? String(year) : "",
+    years: year ? [String(year)] : []
+  };
+}
+
 export function DashboardClient({ initialOptions = null }: { initialOptions?: FilterOptions | null }) {
   const initialFilters = getInitialFilters(initialOptions);
   const [options, setOptions] = useState<FilterOptions | null>(initialOptions);
@@ -125,10 +138,9 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
       ...emptyFilters,
       snapshotDate: options?.dates[0] ?? "",
       snapshotDates: options?.dates[0] ? [options.dates[0]] : [],
-      year: options?.years[0] ? String(options.years[0]) : "",
-      years: options?.years[0] ? [String(options.years[0])] : []
+      ...getLatestYearFilters(options, filters.datasetType)
     }),
-    [options?.dates, options?.years]
+    [filters.datasetType, options]
   );
   const showSummaryCards = !isStudentsDataset || filters.snapshotDates.length <= 1;
   const selectedEducationLevelYear = useMemo(() => {
@@ -333,17 +345,20 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
             year: "",
             years: []
           }
-        : {
+          : {
             ...emptyFilters,
             datasetType: currentDraft.datasetType,
-            year: latestDateFilters.year,
-            years: latestDateFilters.years
+            ...getLatestYearFilters(options, currentDraft.datasetType)
           };
     setDraft(next);
     setFilters(next);
   }
 
   function changeDatasetType(nextDatasetType: DashboardFilterState["datasetType"]) {
+    const latestYears = getLatestYearFilters(options, nextDatasetType);
+    const availableYearValues = new Set(getAvailableYears(options, nextDatasetType).map((year) => String(year)));
+    const retainedYears = draft.years.filter((year) => availableYearValues.has(year));
+    const retainedYear = draft.year && availableYearValues.has(draft.year) ? draft.year : "";
     const next: DashboardFilterState = {
       ...draft,
       datasetType: nextDatasetType,
@@ -354,13 +369,13 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
             ? draft.snapshotDates
             : latestDateFilters.snapshotDates
           : [],
-      year: nextDatasetType === "students" ? "" : draft.year || latestDateFilters.year,
+      year: nextDatasetType === "students" ? "" : retainedYear || latestYears.year,
       years:
         nextDatasetType === "students"
           ? []
-          : draft.years.length
-            ? draft.years
-            : latestDateFilters.years,
+          : retainedYears.length
+            ? retainedYears
+            : latestYears.years,
       studyFormIds: nextDatasetType === "students" ? draft.studyFormIds : []
     };
 

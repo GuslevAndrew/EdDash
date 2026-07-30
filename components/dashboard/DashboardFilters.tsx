@@ -13,6 +13,7 @@ export type FilterOptions = {
   dates: string[];
   datesWithStudyForms: string[];
   years: number[];
+  yearsByDataset?: Partial<Record<Exclude<DashboardDatasetType, "students">, number[]>>;
   institutionTypes: { code: string; name: string }[];
   regions: { id: number; name: string }[];
   institutions: { id: number; name: string; institutionTypeCode: string; regionId: number }[];
@@ -89,8 +90,14 @@ export function DashboardFilters({
     [options?.dates]
   );
   const yearOptions = useMemo<Option[]>(
-    () => options?.years.map((year) => ({ value: String(year), label: String(year) })) ?? [],
-    [options?.years]
+    () => {
+      const years =
+        draft.datasetType === "students"
+          ? options?.years ?? []
+          : options?.yearsByDataset?.[draft.datasetType] ?? options?.years ?? [];
+      return years.map((year) => ({ value: String(year), label: String(year) }));
+    },
+    [draft.datasetType, options?.years, options?.yearsByDataset]
   );
   const institutionTypeOptions = useMemo<Option[]>(
     () =>
@@ -181,7 +188,11 @@ export function DashboardFilters({
   }
 
   function changeYears(years: string[]) {
-    const yearOrder = new Map((options?.years ?? []).map((year, index) => [String(year), index]));
+    const availableYears =
+      draft.datasetType === "students"
+        ? options?.years ?? []
+        : options?.yearsByDataset?.[draft.datasetType] ?? options?.years ?? [];
+    const yearOrder = new Map(availableYears.map((year, index) => [String(year), index]));
     const sortedYears = [...years].sort((first, second) => (yearOrder.get(first) ?? 9999) - (yearOrder.get(second) ?? 9999));
     onDraftChange({
       ...draft,
