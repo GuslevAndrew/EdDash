@@ -20,6 +20,7 @@
     "edbo:institutions": "tsx scripts/import-institutions.ts",
     "edbo:import": "tsx scripts/import-educators.ts",
     "edbo:import:years": "tsx scripts/import-educators-years.ts",
+    "edbo:fix:duplicated-students": "tsx scripts/fix-duplicated-student-snapshots.ts",
     "edbo:outcomes": "tsx scripts/import-yearly-outcomes.ts",
     "edbo:outcomes:years": "tsx scripts/import-yearly-outcomes-years.ts",
     "catalog:specialities": "tsx scripts/generate-speciality-catalog.ts",

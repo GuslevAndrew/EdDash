@@ -65,6 +65,10 @@ function aggregateRows(rows: NormalizedEducatorRow[]): NormalizedEducatorRow[] {
       continue;
     }
 
+    if (existing.sourceHash === row.sourceHash) {
+      continue;
+    }
+
     existing.studentsCount += row.studentsCount;
     existing.sourceHash = createHash("sha256")
       .update([existing.sourceHash, row.sourceHash].sort().join(":"))
