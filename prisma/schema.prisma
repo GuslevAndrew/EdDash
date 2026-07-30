@@ -134,6 +134,11 @@ model StudentSnapshot {
   @@index([educationLevelId])
   @@index([entryBaseId])
   @@index([studyFormId])
+  @@index([snapshotDate, regionId], map: "StudentSnapshot_snapshotDate_regionId_idx")
+  @@index([snapshotDate, specialityId], map: "StudentSnapshot_snapshotDate_specialityId_idx")
+  @@index([snapshotDate, educationLevelId], map: "StudentSnapshot_snapshotDate_educationLevelId_idx")
+  @@index([snapshotDate, entryBaseId], map: "StudentSnapshot_snapshotDate_entryBaseId_idx")
+  @@index([snapshotDate, studyFormId], map: "StudentSnapshot_snapshotDate_studyFormId_idx")
 }
 
 model YearlyOutcome {
@@ -167,6 +172,10 @@ model YearlyOutcome {
   @@index([educationLevelId])
   @@index([entryBaseId])
   @@index([studyFormId])
+  @@index([type, year, regionId], map: "YearlyOutcome_type_year_regionId_idx")
+  @@index([type, year, specialityId], map: "YearlyOutcome_type_year_specialityId_idx")
+  @@index([type, year, educationLevelId], map: "YearlyOutcome_type_year_educationLevelId_idx")
+  @@index([type, year, entryBaseId], map: "YearlyOutcome_type_year_entryBaseId_idx")
 }
 
 model ImportRun {
