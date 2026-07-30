@@ -24,6 +24,11 @@ export type ImportYearlyOutcomesResult = {
   recordsSkipped: number;
 };
 
+export type ImportYearlyOutcomesSource = {
+  payload?: unknown;
+  parameters?: Record<string, unknown>;
+};
+
 function parseArgs(): ImportYearlyOutcomesOptions {
   const args = process.argv.slice(2);
   const parsed: Record<string, string> = {};
@@ -65,6 +70,7 @@ function aggregateRows(rows: NormalizedYearlyOutcomeRow[]): NormalizedYearlyOutc
       grouped.set(key, { ...row });
       continue;
     }
+    if (existing.sourceHash === row.sourceHash) continue;
     existing.personsCount += row.personsCount;
     existing.sourceHash = createHash("sha256")
       .update([existing.sourceHash, row.sourceHash].sort().join(":"))
@@ -98,31 +104,36 @@ function getEndpoint(type: YearlyOutcomeType): string {
   return type === "entrants" ? EDBO_ENDPOINTS.entrants : EDBO_ENDPOINTS.graduates;
 }
 
-export async function importYearlyOutcomes(options: ImportYearlyOutcomesOptions): Promise<ImportYearlyOutcomesResult> {
+export async function importYearlyOutcomes(
+  options: ImportYearlyOutcomesOptions,
+  source?: ImportYearlyOutcomesSource
+): Promise<ImportYearlyOutcomesResult> {
   const run = await prisma.importRun.create({
     data: {
       type: options.type,
       status: "running",
       startedAt: new Date(),
-      parametersJson: JSON.stringify(options)
+      parametersJson: JSON.stringify(source?.parameters ?? options)
     }
   });
 
   try {
-    const payload = await fetchEdboJson(getEndpoint(options.type), {
-      params: {
-        y: options.year,
-        qf: options.qf,
-        eb: options.eb,
-        sp: options.sp,
-        rg: options.rg,
-        id: options.id,
-        exp: "json"
-      },
-      retries: 2,
-      retryDelayMs: 1500,
-      timeoutMs: 20000
-    });
+    const payload =
+      source?.payload ??
+      (await fetchEdboJson(getEndpoint(options.type), {
+        params: {
+          y: options.year,
+          qf: options.qf,
+          eb: options.eb,
+          sp: options.sp,
+          rg: options.rg,
+          id: options.id,
+          exp: "json"
+        },
+        retries: 2,
+        retryDelayMs: 1500,
+        timeoutMs: 20000
+      }));
     const normalizedRows = normalizeYearlyOutcomes(payload, { type: options.type, y: options.year, qf: options.qf, eb: options.eb });
     const rows = aggregateRows(normalizedRows);
     let created = 0;

@@ -24,6 +24,7 @@
     "db:indexes": "tsx scripts/apply-production-indexes.ts",
     "db:audit": "tsx scripts/audit-data-health.ts",
     "edbo:outcomes": "tsx scripts/import-yearly-outcomes.ts",
+    "edbo:outcomes:xlsx": "tsx scripts/import-yearly-outcomes-xlsx.ts",
     "edbo:outcomes:years": "tsx scripts/import-yearly-outcomes-years.ts",
     "catalog:specialities": "tsx scripts/generate-speciality-catalog.ts",
     "db:seed": "tsx scripts/seed-demo-data.ts"
