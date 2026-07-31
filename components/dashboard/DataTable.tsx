@@ -108,7 +108,7 @@ export function DataTable({
             {!rows.length ? (
               <tr>
                 <td colSpan={columns.length} className="px-3 py-10 text-center text-muted">
-                  Дані не знайдено. Спробуйте змінити фільтри або завантажити демонстраційні дані.
+                  Завантажуємо дані. Зачекайте кілька секунд або змініть фільтри.
                 </td>
               </tr>
             ) : null}

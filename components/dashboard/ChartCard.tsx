@@ -63,7 +63,7 @@ export function BarChartCard({ title, data }: { title: string; data: ChartDatum[
           </ResponsiveContainer>
         </div>
       ) : (
-        <EmptyState title="Дані не знайдено" description="Змініть фільтри або завантажте демонстраційні дані." />
+        <EmptyState title="Завантажуємо дані" description="Зачекайте кілька секунд або змініть фільтри." />
       )}
     </article>
   );
@@ -160,7 +160,7 @@ export function ExpandableInstitutionChartCard({
           ) : null}
         </div>
       ) : (
-        <EmptyState title="Дані не знайдено" description="Змініть фільтри або завантажте дані за потрібний зріз." />
+        <EmptyState title="Завантажуємо дані" description="Зачекайте кілька секунд або змініть фільтри." />
       )}
     </article>
   );
@@ -244,7 +244,7 @@ export function RegionChartCard({
           ) : null}
         </div>
       ) : (
-        <EmptyState title="Дані не знайдено" description="Змініть фільтри або завантажте дані за потрібний зріз." />
+        <EmptyState title="Завантажуємо дані" description="Зачекайте кілька секунд або змініть фільтри." />
       )}
     </article>
   );
