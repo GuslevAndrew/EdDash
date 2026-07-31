@@ -19,7 +19,7 @@ export type TableRow = {
 
 const baseColumns = [
   ["institution", "Заклад освіти"],
-  ["institutionType", "Рівень освіти"],
+  ["institutionType", "Рівень закладу освіти"],
   ["region", "Регіон"],
   ["field", "Галузь знань"],
   ["speciality", "Спеціальність"],

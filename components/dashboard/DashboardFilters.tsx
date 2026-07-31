@@ -102,10 +102,9 @@ export function DashboardFilters({
   const institutionTypeOptions = useMemo<Option[]>(
     () =>
       options?.institutionTypes
-        .filter((item) => item.code === "1" || item.code === "9")
         .map((item) => ({
           value: item.code,
-          label: item.code === "1" ? "Вища освіта" : "Фахова передвища освіта"
+          label: item.name
         })) ?? [],
     [options?.institutionTypes]
   );
@@ -216,10 +215,10 @@ export function DashboardFilters({
     <section ref={filtersRef} className="rounded-lg border border-line bg-white p-5 shadow-soft">
       <div className="grid gap-5 md:grid-cols-2">
         <SearchableMultiSelect
-          label="Рівень освіти"
-          allLabel="Вища освіта, Фахова передвища освіта"
-          placeholder="Оберіть потрібний рівень освіти"
-          selectedLabel="Обрано рівнів освіти"
+          label="Рівень закладу освіти"
+          allLabel="Усі рівні закладів освіти"
+          placeholder="Оберіть рівень закладу освіти"
+          selectedLabel="Обрано рівнів закладів освіти"
           options={institutionTypeOptions}
           selectedValues={draft.institutionTypeCodes}
           onChange={changeInstitutionTypes}

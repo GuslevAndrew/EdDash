@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { SUPPORTED_INSTITUTION_TYPE_CODES } from "@/lib/edbo/constants";
 
 const minSearchLength = 3;
 const maxResults = 30;
@@ -15,13 +16,14 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const query = (searchParams.get("q") ?? "").trim();
-    const levelCodes = searchParams.getAll("level").filter((value) => value === "1" || value === "9");
+    const supportedLevelCodes = new Set<string>(SUPPORTED_INSTITUTION_TYPE_CODES);
+    const levelCodes = searchParams.getAll("level").filter((value) => supportedLevelCodes.has(value));
     const regionIds = numberValues(searchParams.getAll("region"));
     const selectedIds = numberValues(searchParams.getAll("selected"));
     const showBlocked = searchParams.get("showBlocked") === "1";
 
     const baseWhere: Prisma.InstitutionWhereInput = {
-      institutionTypeCode: { in: levelCodes.length ? levelCodes : ["1", "9"] },
+      institutionTypeCode: { in: levelCodes.length ? levelCodes : [...SUPPORTED_INSTITUTION_TYPE_CODES] },
       regionId: regionIds.length ? { in: regionIds } : undefined,
       blockedAt: showBlocked ? undefined : null
     };

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { SUPPORTED_INSTITUTION_TYPE_CODES } from "@/lib/edbo/constants";
 import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical";
 
 const defaultPageSize = 25;
@@ -35,7 +36,7 @@ type InstitutionSortRef = {
 };
 
 const tableQuerySchema = z.object({
-  level: z.array(z.enum(["1", "9"])).default([]),
+  level: z.array(z.enum(SUPPORTED_INSTITUTION_TYPE_CODES)).default([]),
   region: z.array(z.coerce.number().int().positive()).default([]),
   institution: z.array(z.coerce.number().int().positive()).default([]),
   date: z.string().optional(),
@@ -151,7 +152,7 @@ function displayShortName(value: string | null): string | null {
 
 export async function GET(request: Request) {
   const parsed = parseTableQuery(new URL(request.url).searchParams);
-  const filteredInstitutionTypeCodes = parsed.level.length ? parsed.level : ["1", "9"];
+  const filteredInstitutionTypeCodes = parsed.level.length ? parsed.level : [...SUPPORTED_INSTITUTION_TYPE_CODES];
   const showBlocked = parsed.showBlocked === "1";
   const needsFullInstitutionSort = parsed.sort === "students" || parsed.sort === "parent";
   const requestedDate = parsed.date && !Number.isNaN(new Date(parsed.date).getTime()) ? new Date(parsed.date) : null;

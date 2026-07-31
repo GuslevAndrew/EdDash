@@ -16,6 +16,13 @@ const defaultPageSize = 25;
 const maxPageSize = 250;
 const sortKeys = ["institution", "parent", "region", "students", "foundationYear", "ownership"] as const;
 const sortDirections = ["asc", "desc"] as const;
+const supportedInstitutionTypeCodes = ["1", "8", "9", "10"];
+const institutionLevelOptions = [
+  { value: "1", label: "Вища освіта" },
+  { value: "8", label: "Наукові інститути (установи)" },
+  { value: "9", label: "Фахова передвища освіта" },
+  { value: "10", label: "Заклади післядипломної освіти" }
+];
 
 type SortKey = (typeof sortKeys)[number];
 type SortDirection = (typeof sortDirections)[number];
@@ -109,8 +116,8 @@ function summarizeSelection(
 export function InstitutionsPageClient() {
   const searchParams = useSearchParams();
   const queryString = searchParams.toString();
-  const selectedInstitutionTypeCodes = getStringParams(searchParams, "level").filter((value) => value === "1" || value === "9");
-  const filteredInstitutionTypeCodes = selectedInstitutionTypeCodes.length ? selectedInstitutionTypeCodes : ["1", "9"];
+  const selectedInstitutionTypeCodes = getStringParams(searchParams, "level").filter((value) => supportedInstitutionTypeCodes.includes(value));
+  const filteredInstitutionTypeCodes = selectedInstitutionTypeCodes.length ? selectedInstitutionTypeCodes : supportedInstitutionTypeCodes;
   const regionIds = getNumberParams(searchParams, "region");
   const selectedInstitutionIds = getNumberParams(searchParams, "institution");
   const requestedDateValue = searchParams.get("date") ?? "";
@@ -214,10 +221,6 @@ export function InstitutionsPageClient() {
     setMapSummary(nextData);
   }, []);
   const mapFilterChips = useMemo(() => {
-    const institutionLevelOptions = [
-      { value: "1", label: "Вища освіта" },
-      { value: "9", label: "Фахова передвища освіта" }
-    ];
     const regionOptions = filters?.regions.map((region) => ({ value: String(region.id), label: region.name })) ?? [];
     const institutionOptions = filters?.selectedInstitutions.map((institution) => ({
       value: String(institution.id),
@@ -234,8 +237,8 @@ export function InstitutionsPageClient() {
 
     const chips = [
       {
-        label: "Рівень освіти",
-        ...summarizeSelection(selectedInstitutionTypeCodes, institutionLevelOptions, "Усі рівні освіти", "рівнів освіти")
+        label: "Рівень закладу освіти",
+        ...summarizeSelection(selectedInstitutionTypeCodes, institutionLevelOptions, "Усі рівні закладів освіти", "рівнів закладів освіти")
       },
       {
         label: "Регіон",
@@ -320,15 +323,12 @@ export function InstitutionsPageClient() {
             ) : null}
             <div className="grid gap-5 md:grid-cols-2">
               <SearchableMultiSelectField
-                label="Рівень освіти"
+                label="Рівень закладу освіти"
                 name="level"
-                options={[
-                  { value: "1", label: "Вища освіта" },
-                  { value: "9", label: "Фахова передвища освіта" }
-                ]}
+                options={institutionLevelOptions}
                 selectedValues={selectedInstitutionTypeCodes}
-                placeholder="Оберіть потрібний рівень освіти"
-                selectedLabel="Обрано рівнів освіти"
+                placeholder="Оберіть рівень закладу освіти"
+                selectedLabel="Обрано рівнів закладів освіти"
                 disableSearch
                 hideResetButton
               />
@@ -453,15 +453,23 @@ export function InstitutionsPageClient() {
       ) : null}
 
       {filters ? (
-        <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-7">
           <SummaryCard title="Усього закладів" value={formatNumber(filters.totalByLevel.reduce((sum, item) => sum + item.count, 0))} />
           <SummaryCard
             title="Вища освіта"
             value={formatNumber(filters.totalByLevel.find((item) => item.institutionTypeCode === "1")?.count ?? 0)}
           />
           <SummaryCard
+            title="Наукові інститути"
+            value={formatNumber(filters.totalByLevel.find((item) => item.institutionTypeCode === "8")?.count ?? 0)}
+          />
+          <SummaryCard
             title="Фахова передвища освіта"
             value={formatNumber(filters.totalByLevel.find((item) => item.institutionTypeCode === "9")?.count ?? 0)}
+          />
+          <SummaryCard
+            title="Післядипломна освіта"
+            value={formatNumber(filters.totalByLevel.find((item) => item.institutionTypeCode === "10")?.count ?? 0)}
           />
           <SummaryCard title="Регіонів" value={formatNumber(filters.totalRegions)} />
           <SummaryCard title="Кількість здобувачів" value={studentsTotal === null ? "Оновлюю..." : formatNumber(studentsTotal)} />
@@ -526,8 +534,8 @@ function FilterSkeleton() {
 
 function SummarySkeleton() {
   return (
-    <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-      {Array.from({ length: 5 }).map((_, index) => (
+    <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-7">
+      {Array.from({ length: 7 }).map((_, index) => (
         <div key={index} className="rounded-lg border border-line bg-white p-5 shadow-soft">
           <div className="h-4 w-24 rounded bg-slate-100" />
           <div className="mt-3 h-7 w-20 rounded bg-slate-100" />

@@ -19,5 +19,13 @@ export const DEFAULT_ENTRY_BASES = ["40", "30"];
 
 export const INSTITUTION_TYPES = {
   higher: { code: "1", name: "Вища освіта" },
-  professionalPreHigher: { code: "9", name: "Фахова передвища освіта" }
+  scientific: { code: "8", name: "Наукові інститути (установи)" },
+  professionalPreHigher: { code: "9", name: "Фахова передвища освіта" },
+  postgraduate: { code: "10", name: "Заклади післядипломної освіти" }
 } as const;
+
+export const SUPPORTED_INSTITUTION_TYPE_CODES = ["1", "8", "9", "10"] as const;
+
+export function getInstitutionTypeName(code: string): string {
+  return Object.values(INSTITUTION_TYPES).find((item) => item.code === code)?.name ?? "Інший тип закладу освіти";
+}

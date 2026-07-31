@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { SUPPORTED_INSTITUTION_TYPE_CODES } from "@/lib/edbo/constants";
 import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical";
 
 const cacheHeaders = {
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
   const showBlocked = searchParams.get("showBlocked") === "1";
 
   const statsWhere: Prisma.InstitutionWhereInput = {
-    institutionTypeCode: { in: ["1", "9"] },
+    institutionTypeCode: { in: [...SUPPORTED_INSTITUTION_TYPE_CODES] },
     blockedAt: showBlocked ? undefined : null
   };
 

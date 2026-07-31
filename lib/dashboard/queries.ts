@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical";
+import { INSTITUTION_TYPES } from "@/lib/edbo/constants";
 import { formatCanonicalSpeciality } from "@/lib/specialities/canonical";
 import { specialityCatalogSource } from "@/lib/specialities/catalog";
 import { buildSnapshotWhere, buildYearlyOutcomeWhere } from "./filters";
@@ -113,8 +114,10 @@ export async function getFilterOptions() {
         .sort((first, second) => second - first)
     },
     institutionTypes: [
-      { code: "1", name: "Заклади вищої освіти" },
-      { code: "9", name: "Заклади фахової передвищої освіти" }
+      { code: INSTITUTION_TYPES.higher.code, name: "Заклади вищої освіти" },
+      { code: INSTITUTION_TYPES.scientific.code, name: INSTITUTION_TYPES.scientific.name },
+      { code: INSTITUTION_TYPES.professionalPreHigher.code, name: "Заклади фахової передвищої освіти" },
+      { code: INSTITUTION_TYPES.postgraduate.code, name: INSTITUTION_TYPES.postgraduate.name }
     ],
     fields: specialityCatalogSource.fields,
     regions: [

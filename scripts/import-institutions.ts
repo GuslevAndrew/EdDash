@@ -3,15 +3,29 @@ import { fetchEdboJson } from "@/lib/edbo/client";
 import { EDBO_ENDPOINTS, INSTITUTION_TYPES } from "@/lib/edbo/constants";
 import { normalizeInstitutions } from "@/lib/edbo/normalize";
 
-const institutionTypes = [INSTITUTION_TYPES.higher, INSTITUTION_TYPES.professionalPreHigher];
+const institutionTypes = [
+  INSTITUTION_TYPES.higher,
+  INSTITUTION_TYPES.scientific,
+  INSTITUTION_TYPES.professionalPreHigher,
+  INSTITUTION_TYPES.postgraduate
+];
+
+function parseTypesArg() {
+  const index = process.argv.indexOf("--types");
+  const values = index >= 0 ? process.argv[index + 1]?.split(",").map((item) => item.trim()).filter(Boolean) : [];
+  if (!values.length) return institutionTypes;
+  const selected = institutionTypes.filter((item) => values.includes(item.code));
+  return selected.length ? selected : institutionTypes;
+}
 
 async function main() {
+  const selectedInstitutionTypes = parseTypesArg();
   const run = await prisma.importRun.create({
     data: {
       type: "institutions",
       status: "running",
       startedAt: new Date(),
-      parametersJson: JSON.stringify({ institutionTypes })
+      parametersJson: JSON.stringify({ institutionTypes: selectedInstitutionTypes })
     }
   });
 
@@ -20,7 +34,7 @@ async function main() {
     let created = 0;
     let updated = 0;
 
-    for (const institutionType of institutionTypes) {
+    for (const institutionType of selectedInstitutionTypes) {
       const payload = await fetchEdboJson(EDBO_ENDPOINTS.universities, {
         params: { ut: institutionType.code, exp: "json" },
         retries: 2,

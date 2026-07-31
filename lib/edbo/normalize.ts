@@ -1,5 +1,5 @@
 ﻿import { createHash } from "node:crypto";
-import { INSTITUTION_TYPES } from "./constants";
+import { getInstitutionTypeName } from "./constants";
 import type {
   NormalizedEducatorRow,
   NormalizedInstitution,
@@ -187,19 +187,14 @@ export function normalizeSpecialities(payload: unknown): NormalizedSpeciality[] 
 }
 
 export function normalizeInstitutions(payload: unknown, institutionTypeCode: string): NormalizedInstitution[] {
-  const fallbackType =
-    institutionTypeCode === INSTITUTION_TYPES.professionalPreHigher.code
-      ? INSTITUTION_TYPES.professionalPreHigher
-      : INSTITUTION_TYPES.higher;
-
   return extractRows(payload)
     .map((row) => ({
       externalId: pickString(row, ["Код", "id", "university_id", "institution_id"]),
       parentExternalId: pickString(row, ["Код головного закладу", "parent_id", "main_university_id"]),
       name: pickString(row, ["Назва закладу освіти", "name", "university_name", "institution_name"]) ?? "",
-      shortName: normalizeShortName(pickString(row, ["Скорочена назва", "Коротка назва", "short_name", "university_short_name"])),
-      institutionTypeCode,
-      institutionTypeName: fallbackType.name,
+        shortName: normalizeShortName(pickString(row, ["Скорочена назва", "Коротка назва", "short_name", "university_short_name"])),
+        institutionTypeCode,
+        institutionTypeName: getInstitutionTypeName(institutionTypeCode),
       regionName: normalizeRegionName(pickString(row, ["Регіон (місцезнаходження)", "Регіон", "Область", "region_name", "RegionName"])),
       regionCode: pickString(row, ["Код регіону", "region_code", "KOATUU"]),
       foundationYear: normalizeFoundationYear(pickString(row, ["Рік заснування", "foundation_year", "founded_at"])),
