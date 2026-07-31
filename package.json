@@ -24,6 +24,7 @@
     "db:indexes": "tsx scripts/apply-production-indexes.ts",
     "db:audit": "tsx scripts/audit-data-health.ts",
     "edbo:outcomes": "tsx scripts/import-yearly-outcomes.ts",
+    "edbo:outcomes:broad": "tsx scripts/import-yearly-outcomes-broad.ts",
     "edbo:outcomes:grid": "tsx scripts/import-yearly-outcomes-grid.ts",
     "edbo:outcomes:xlsx": "tsx scripts/import-yearly-outcomes-xlsx.ts",
     "edbo:outcomes:years": "tsx scripts/import-yearly-outcomes-years.ts",
