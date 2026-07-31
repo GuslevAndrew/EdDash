@@ -98,10 +98,13 @@ async function getCombos(type: YearlyOutcomeType): Promise<Combo[]> {
 async function main() {
   const type = parseTypeArg();
   const years = parseListArg("years", ["2020", "2021", "2022", "2023"]);
+  const qfFilter = new Set(parseListArg("qf", []));
   const delayMs = parseNumberArg("delay", 300);
   const timeoutMs = parseNumberArg("timeout", 30000);
   const limit = parseNumberArg("limit", 0);
-  const combos = (await getCombos(type)).slice(0, limit > 0 ? limit : undefined);
+  const combos = (await getCombos(type))
+    .filter((combo) => !qfFilter.size || qfFilter.has(combo.qf))
+    .slice(0, limit > 0 ? limit : undefined);
   const totalRequests = years.length * combos.length;
   const endpoint = type === "entrants" ? EDBO_ENDPOINTS.entrants : EDBO_ENDPOINTS.graduates;
   const requestResults: BatchResult[] = [];
