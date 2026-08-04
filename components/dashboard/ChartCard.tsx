@@ -556,7 +556,7 @@ export function LineChartCard({
           ) : null}
           {breakdownOptions.length ? (
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted">Показати в динаміці</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted">Показати в динаміці з використанням змінних</div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {breakdownOptions.map((option) => (
                   <label
