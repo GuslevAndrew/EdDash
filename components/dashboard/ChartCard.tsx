@@ -28,6 +28,8 @@ export type ChartDatum = {
 
 const initialVisibleBars = 10;
 const visibleBarsStep = 10;
+const dynamicsVariablesHelpText =
+  "Чекбокси додають на графік окремі лінії за вибраними змінними. Наприклад, можна порівняти динаміку за закладами освіти, регіонами, галузями, спеціальностями, освітніми рівнями або формами навчання.";
 
 function tooltipFormatter(value: number | string) {
   return [formatNumber(Number(value)), "Кількість здобувачів"];
@@ -572,7 +574,10 @@ export function LineChartCard({
           ) : null}
           {breakdownOptions.length ? (
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted">Показати в динаміці з використанням змінних</div>
+              <div className="flex items-center gap-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted">Показати в динаміці з використанням змінних</div>
+                <InfoTooltip text={dynamicsVariablesHelpText} />
+              </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {breakdownOptions.map((option) => (
                   <label
