@@ -534,7 +534,7 @@ export function LineChartCard({
           </ResponsiveContainer>
         </div>
       ) : (
-        <EmptyState title="Немає динаміки" description="Для графіка потрібен хоча б один доступний зріз." />
+        <EmptyState title="Завантаження даних" description="Для графіка потрібен хоча б один доступний зріз." />
       )}
       {dateOptions.length || breakdownOptions.length ? (
         <div className="mt-4 space-y-4 border-t border-line pt-4">
