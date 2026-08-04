@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { formatNumber } from "@/lib/utils/format";
 
 const defaultPageSize = 25;
 const maxPageSize = 250;
+const tableHelpText =
+  "Таблиця показує перелік закладів освіти відповідно до вибраних фільтрів. Натискайте на назви стовпців, щоб змінювати сортування; кнопка «Показати ще» додає наступні заклади до списку.";
 
 type SortKey = "institution" | "parent" | "region" | "students" | "foundationYear" | "ownership";
 type SortDirection = "asc" | "desc";
@@ -128,7 +131,10 @@ export function InstitutionsTable({
     <section className="rounded-lg border border-line bg-white p-5 shadow-soft">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-ink">Заклади освіти</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-ink">Заклади освіти</h2>
+            <InfoTooltip text={tableHelpText} />
+          </div>
           <p className="mt-1 text-sm text-muted">
             {data ? `Знайдено: ${formatNumber(data.total)}` : "Дані таблиці завантажуються."}
           </p>

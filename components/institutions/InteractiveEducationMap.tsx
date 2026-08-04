@@ -12,6 +12,7 @@ import {
   YAxis
 } from "recharts";
 import { LoadingNotice } from "@/components/ui/LoadingNotice";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { formatDate, formatNumber } from "@/lib/utils/format";
 
 type SvgRegion = {
@@ -123,6 +124,25 @@ function normalizeRegionName(value: string): string {
 }
 
 type MapMetric = "institutions" | "students";
+
+const mapHelpText =
+  "Карта показує кількість закладів освіти та кількість здобувачів за регіонами відповідно до вибраних фільтрів. Щоб змінити дані на карті, налаштуйте фільтри вище та натисніть «Застосувати». Перша цифра на області - заклади освіти, друга - контингент.";
+
+const dynamicsHelpText =
+  "Блок показує, як змінювалися кількість здобувачів і кількість закладів освіти за вибраними фільтрами. Під графіком можна обрати потрібні дати для порівняння.";
+
+function SectionTitle({ title, helpText, size = "base" }: { title: string; helpText: string; size?: "base" | "lg" }) {
+  return (
+    <div className="flex items-center gap-2">
+      {size === "lg" ? (
+        <h2 className="text-lg font-semibold text-ink">{title}</h2>
+      ) : (
+        <h3 className="text-base font-semibold text-ink">{title}</h3>
+      )}
+      <InfoTooltip text={helpText} />
+    </div>
+  );
+}
 
 function getFillColor(value: number, hasData: boolean, metric: MapMetric): string {
   if (!hasData) return "#f8fafc";
@@ -269,7 +289,7 @@ export function InteractiveEducationMap({
     <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-ink">Інтерактивна карта освіти</h2>
+          <SectionTitle title="Інтерактивна карта освіти" helpText={mapHelpText} size="lg" />
           <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
             Карта показує кількість закладів освіти та контингент за регіонами відповідно до обраних фільтрів.
           </p>
@@ -405,7 +425,7 @@ export function InteractiveEducationMap({
     <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-soft">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-base font-semibold text-ink">Показники в динаміці</h3>
+            <SectionTitle title="Показники в динаміці" helpText={dynamicsHelpText} />
             <p className="mt-1 text-sm leading-6 text-muted">
               Графік показує зміну контингенту та кількості закладів освіти за вибраними фільтрами.
             </p>
