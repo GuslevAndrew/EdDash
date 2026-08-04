@@ -124,12 +124,11 @@ function normalizeRegionName(value: string): string {
 
 type MapMetric = "institutions" | "students";
 
-function getFillColor(value: number, maxValue: number, isSelectedMode: boolean, hasData: boolean, metric: MapMetric): string {
+function getFillColor(value: number, hasData: boolean, metric: MapMetric): string {
   if (!hasData) return "#f8fafc";
-  if (isSelectedMode) return metric === "students" ? "#f59e0b" : "#2563eb";
-  const ratio = maxValue > 0 ? value / maxValue : 0;
-  const clampedRatio = Math.max(0, Math.min(1, ratio));
-  const lightness = 88 - clampedRatio * 42;
+  const step = metric === "students" ? 5000 : 5;
+  const level = Math.floor(Math.max(0, value) / step);
+  const lightness = Math.max(42, 88 - level * 3);
   const hue = metric === "students" ? 43 : 217;
   const saturation = metric === "students" ? 95 : 85;
   return `hsl(${hue} ${saturation}% ${lightness}%)`;
@@ -242,9 +241,6 @@ export function InteractiveEducationMap({
     return new Map(entries);
   }, [data?.regions]);
 
-  const maxInstitutions = Math.max(0, ...(data?.regions.map((region) => region.institutionsCount) ?? []));
-  const maxStudents = Math.max(0, ...(data?.regions.map((region) => region.studentsCount) ?? []));
-  const mapMetricMaxValue = mapMetric === "students" ? maxStudents : maxInstitutions;
   const totalInstitutions = data?.regions.reduce((sum, region) => sum + region.institutionsCount, 0) ?? 0;
   const totalStudents = data?.regions.reduce((sum, region) => sum + region.studentsCount, 0) ?? 0;
   const dynamicDateOptions = useMemo(
@@ -269,6 +265,7 @@ export function InteractiveEducationMap({
   );
 
   return (
+    <>
     <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -310,20 +307,6 @@ export function InteractiveEducationMap({
       ) : null}
 
       {error ? <p className="mt-4 rounded-md border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-slate-50 px-3 py-2">
-        <p className="text-xs leading-5 text-muted">
-          Колір карти: {mapMetric === "students" ? "за кількістю здобувачів" : "за кількістю закладів освіти"}.
-        </p>
-        <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-          <input
-            type="checkbox"
-            checked={mapMetric === "students"}
-            onChange={(event) => setMapMetric(event.target.checked ? "students" : "institutions")}
-            className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400"
-          />
-          Фарбувати за кількістю здобувачів
-        </label>
-      </div>
       {!regions.length || !data ? (
         <div className="mt-4">
           <LoadingNotice text="Оновлюю карту освіти, зачекайте декілька секунд..." />
@@ -344,9 +327,7 @@ export function InteractiveEducationMap({
                 const hasData = Boolean(stat);
                 const shouldShowData = !isSelectedMode || hasData;
                 const colorValue = mapMetric === "students" ? stat?.studentsCount ?? 0 : stat?.institutionsCount ?? 0;
-                const fill = shouldShowData
-                  ? getFillColor(colorValue, mapMetricMaxValue, isSelectedMode, hasData, mapMetric)
-                  : "#ffffff";
+                const fill = shouldShowData ? getFillColor(colorValue, hasData, mapMetric) : "#ffffff";
                 const stroke = isSelectedMode && hasData ? (mapMetric === "students" ? "#92400e" : "#0f3ea8") : "#475569";
 
                 return (
@@ -401,6 +382,15 @@ export function InteractiveEducationMap({
           </svg>
         </div>
       )}
+      <label className="mt-3 inline-flex w-fit items-center gap-2 rounded-md border border-line bg-slate-50 px-2.5 py-1.5 text-sm font-medium text-slate-700">
+        <input
+          type="checkbox"
+          checked={mapMetric === "students"}
+          onChange={(event) => setMapMetric(event.target.checked ? "students" : "institutions")}
+          className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400"
+        />
+        Карта за здобувачами
+      </label>
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted">
         <span className="inline-flex items-center gap-2">
           <span className={`h-3 w-6 rounded-sm ${mapMetric === "students" ? "bg-amber-500" : "bg-brand-600"}`} /> Більше значення
@@ -410,7 +400,9 @@ export function InteractiveEducationMap({
         </span>
         <span>Перша цифра - заклади освіти, друга - контингент.</span>
       </div>
-      <div className="mt-5 border-t border-line pt-5">
+    </section>
+
+    <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-soft">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-base font-semibold text-ink">Динаміка EdМапи</h3>
@@ -491,8 +483,8 @@ export function InteractiveEducationMap({
             />
           </div>
         ) : null}
-      </div>
     </section>
+    </>
   );
 }
 
