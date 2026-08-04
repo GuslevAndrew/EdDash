@@ -63,7 +63,8 @@ function makeTableQuery(baseQuery: string, sort: SortKey, direction: SortDirecti
 }
 
 function nextSortDirection(sort: SortKey, currentSort: SortKey, currentDirection: SortDirection): SortDirection {
-  return sort === currentSort && currentDirection === "asc" ? "desc" : "asc";
+  if (sort === currentSort) return currentDirection === "asc" ? "desc" : "asc";
+  return sort === "students" ? "desc" : "asc";
 }
 
 export function InstitutionsTable({
