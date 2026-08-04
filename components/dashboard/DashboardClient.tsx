@@ -203,7 +203,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
   useEffect(() => {
     if (initialOptions) return;
 
-    fetch(`/api/filters?refresh=${Date.now()}`, { cache: "no-store" })
+    fetch("/api/filters")
       .then((response) => response.json())
       .then((data: FilterOptions) => {
         setOptions(data);
@@ -244,9 +244,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
       setIsSummaryLoading(true);
       setMessage(null);
       try {
-        const summaryParams = new URLSearchParams(params);
-        summaryParams.set("refresh", String(Date.now()));
-        const summaryResponse = await fetch(`/api/dashboard/summary?${summaryParams.toString()}`, { cache: "no-store" });
+        const summaryResponse = await fetch(`/api/dashboard/summary?${params.toString()}`);
         if (!summaryResponse.ok) throw new Error("Dashboard summary API returned an error");
         const summaryData = await summaryResponse.json();
         if (!active) return;
@@ -262,9 +260,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
       setIsChartsLoading(true);
       setMessage(null);
       try {
-        const chartsParams = new URLSearchParams(params);
-        chartsParams.set("refresh", String(Date.now()));
-        const chartsResponse = await fetch(`/api/dashboard/charts?${chartsParams.toString()}`, { cache: "no-store" });
+        const chartsResponse = await fetch(`/api/dashboard/charts?${params.toString()}`);
         if (!chartsResponse.ok) throw new Error("Dashboard charts API returned an error");
         const chartsData = await chartsResponse.json();
         if (!active) return;
@@ -280,9 +276,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
     async function loadDynamics() {
       setIsDynamicsLoading(true);
       try {
-        const dynamicsParams = new URLSearchParams(params);
-        dynamicsParams.set("refresh", String(Date.now()));
-        const dynamicsResponse = await fetch(`/api/dashboard/dynamics?${dynamicsParams.toString()}`, { cache: "no-store" });
+        const dynamicsResponse = await fetch(`/api/dashboard/dynamics?${params.toString()}`);
         if (!dynamicsResponse.ok) throw new Error("Dashboard dynamics API returned an error");
         const dynamicsData = await dynamicsResponse.json();
         if (!active) return;
@@ -310,10 +304,9 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
     const controller = new AbortController();
     const search = new URLSearchParams(params);
     for (const breakdown of missingBreakdowns) search.append("breakdown", breakdown);
-    search.set("refresh", String(Date.now()));
 
     setIsDynamicsBreakdownLoading(true);
-    fetch(`/api/dashboard/dynamics-breakdowns?${search.toString()}`, { cache: "no-store", signal: controller.signal })
+    fetch(`/api/dashboard/dynamics-breakdowns?${search.toString()}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Dynamics breakdown request failed");
         return response.json() as Promise<Partial<Record<DynamicsBreakdownValue, DynamicsSeries[]>>>;
