@@ -264,7 +264,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
         if (!chartsResponse.ok) throw new Error("Dashboard charts API returned an error");
         const chartsData = await chartsResponse.json();
         if (!active) return;
-        setCharts({ ...defaultCharts, ...chartsData });
+        setCharts((current) => ({ ...defaultCharts, ...chartsData, dynamics: current.dynamics }));
         setLoadedDynamicsBreakdowns({});
       } catch {
         if (active) setMessage("Не вдалося оновити графіки. Дані залишилися без змін.");
@@ -288,9 +288,8 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
       }
     }
     loadSummary();
-    loadCharts().then(() => {
-      if (active) loadDynamics();
-    });
+    loadCharts();
+    loadDynamics();
     return () => {
       active = false;
     };
