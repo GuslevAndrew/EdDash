@@ -102,15 +102,17 @@ function normalizeRegionName(value: string): string {
     .trim();
 }
 
-function getFillColor(value: number, maxValue: number, isSelectedMode: boolean, hasData: boolean): string {
+type MapMetric = "institutions" | "students";
+
+function getFillColor(value: number, maxValue: number, isSelectedMode: boolean, hasData: boolean, metric: MapMetric): string {
   if (!hasData) return "#f8fafc";
-  if (isSelectedMode) return "#2563eb";
+  if (isSelectedMode) return metric === "students" ? "#f59e0b" : "#2563eb";
   const ratio = maxValue > 0 ? value / maxValue : 0;
-  if (ratio >= 0.8) return "#1d4ed8";
-  if (ratio >= 0.6) return "#2563eb";
-  if (ratio >= 0.4) return "#3b82f6";
-  if (ratio >= 0.2) return "#60a5fa";
-  return "#bfdbfe";
+  const clampedRatio = Math.max(0, Math.min(1, ratio));
+  const lightness = 88 - clampedRatio * 42;
+  const hue = metric === "students" ? 43 : 217;
+  const saturation = metric === "students" ? 95 : 85;
+  return `hsl(${hue} ${saturation}% ${lightness}%)`;
 }
 
 function parseUkraineSvg(svgText: string): SvgRegion[] {
@@ -138,6 +140,7 @@ export function InteractiveEducationMap({
   const [regions, setRegions] = useState<SvgRegion[]>([]);
   const [data, setData] = useState<RegionMapResponse | null>(null);
   const [error, setError] = useState("");
+  const [mapMetric, setMapMetric] = useState<MapMetric>("institutions");
   const isSelectedMode = selectedRegionIds.length > 0;
 
   useEffect(() => {
@@ -186,7 +189,9 @@ export function InteractiveEducationMap({
     return new Map(entries);
   }, [data?.regions]);
 
+  const maxInstitutions = Math.max(0, ...(data?.regions.map((region) => region.institutionsCount) ?? []));
   const maxStudents = Math.max(0, ...(data?.regions.map((region) => region.studentsCount) ?? []));
+  const mapMetricMaxValue = mapMetric === "students" ? maxStudents : maxInstitutions;
   const totalInstitutions = data?.regions.reduce((sum, region) => sum + region.institutionsCount, 0) ?? 0;
   const totalStudents = data?.regions.reduce((sum, region) => sum + region.studentsCount, 0) ?? 0;
 
@@ -232,6 +237,20 @@ export function InteractiveEducationMap({
       ) : null}
 
       {error ? <p className="mt-4 rounded-md border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-slate-50 px-3 py-2">
+        <p className="text-xs leading-5 text-muted">
+          Колір карти: {mapMetric === "students" ? "за кількістю здобувачів" : "за кількістю закладів освіти"}.
+        </p>
+        <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+          <input
+            type="checkbox"
+            checked={mapMetric === "students"}
+            onChange={(event) => setMapMetric(event.target.checked ? "students" : "institutions")}
+            className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400"
+          />
+          Фарбувати за кількістю здобувачів
+        </label>
+      </div>
       {!regions.length || !data ? (
         <div className="mt-4">
           <LoadingNotice text="Оновлюю карту освіти, зачекайте декілька секунд..." />
@@ -251,10 +270,11 @@ export function InteractiveEducationMap({
                 const stat = statsByRegion.get(normalizeRegionName(ukrainianName));
                 const hasData = Boolean(stat);
                 const shouldShowData = !isSelectedMode || hasData;
+                const colorValue = mapMetric === "students" ? stat?.studentsCount ?? 0 : stat?.institutionsCount ?? 0;
                 const fill = shouldShowData
-                  ? getFillColor(stat?.studentsCount ?? 0, maxStudents, isSelectedMode, hasData)
+                  ? getFillColor(colorValue, mapMetricMaxValue, isSelectedMode, hasData, mapMetric)
                   : "#ffffff";
-                const stroke = isSelectedMode && hasData ? "#0f3ea8" : "#475569";
+                const stroke = isSelectedMode && hasData ? (mapMetric === "students" ? "#92400e" : "#0f3ea8") : "#475569";
 
                 return (
                   <path
@@ -310,10 +330,10 @@ export function InteractiveEducationMap({
       )}
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted">
         <span className="inline-flex items-center gap-2">
-          <span className="h-3 w-6 rounded-sm bg-brand-600" /> Більше значення
+          <span className={`h-3 w-6 rounded-sm ${mapMetric === "students" ? "bg-amber-500" : "bg-brand-600"}`} /> Більше значення
         </span>
         <span className="inline-flex items-center gap-2">
-          <span className="h-3 w-6 rounded-sm bg-brand-100" /> Менше значення
+          <span className={`h-3 w-6 rounded-sm ${mapMetric === "students" ? "bg-amber-100" : "bg-brand-100"}`} /> Менше значення
         </span>
         <span>Перша цифра - заклади освіти, друга - контингент.</span>
       </div>
