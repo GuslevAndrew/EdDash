@@ -74,7 +74,10 @@ export function ExpandableInstitutionChartCard({
   const totalSourceData = totalData?.length ? totalData : data;
   const selectedNameSet = useMemo(() => new Set(selectedNames), [selectedNames]);
   const selectedData = useMemo(
-    () => selectedNames.map((name) => data.find((item) => item.name === name) ?? { name, value: 0 }),
+    () =>
+      selectedNames
+        .map((name) => data.find((item) => item.name === name) ?? { name, value: 0 })
+        .sort((first, second) => second.value - first.value),
     [data, selectedNames]
   );
   const rankedData = useMemo(() => data.filter((item) => !selectedNameSet.has(item.name)), [data, selectedNameSet]);
