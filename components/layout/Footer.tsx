@@ -11,7 +11,7 @@ function MailIcon() {
 
 export function Footer() {
   return (
-    <footer className="mt-12 border-t border-line bg-white">
+    <footer className="mt-12 border-t border-line bg-white/90">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
         <Image
           src="/brand/eddash-logo.png"
@@ -24,7 +24,7 @@ export function Footer() {
 
         <div className="flex flex-wrap items-center gap-2">
           <a
-            className="inline-flex items-center gap-2 rounded-md border border-brand-100 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100"
+            className="inline-flex items-center gap-2 rounded-md border border-brand-100 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 shadow-sm transition hover:border-brand-200 hover:bg-brand-100 hover:text-brand-900"
             href="mailto:contact@eddash.info"
           >
             <MailIcon />

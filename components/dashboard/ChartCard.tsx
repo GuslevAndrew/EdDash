@@ -710,16 +710,16 @@ function MiniMultiSelect({
     <div className="relative max-w-sm">
       <div className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</div>
       <details ref={detailsRef} className="group relative mt-2">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md border border-line bg-white px-3 py-2 text-sm outline-none hover:bg-slate-50 focus:border-brand-500">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md border border-line bg-white px-3 py-2 text-sm shadow-sm outline-none transition hover:border-brand-200 hover:bg-brand-50/50 focus:border-brand-500">
           <span className="truncate">{labelText}</span>
           <span className="text-xs text-muted group-open:rotate-180">▼</span>
         </summary>
-        <div className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-md border border-line bg-white p-2 shadow-lg">
+        <div className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-md border border-line bg-white p-2 shadow-dropdown">
           {!disableSearch ? (
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="mb-2 w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-brand-500"
+              className="mb-2 w-full rounded-md border border-line px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               placeholder="Пошук у списку"
             />
           ) : null}
@@ -728,7 +728,7 @@ function MiniMultiSelect({
               type="button"
               onClick={resetSelection}
               disabled={!selectedOptions.length}
-              className="mb-2 w-full rounded-md border border-line px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
+              className="mb-2 w-full rounded-md border border-line px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-brand-200 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-45"
             >
               Скинути
             </button>

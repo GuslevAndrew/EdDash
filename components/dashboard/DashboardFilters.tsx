@@ -212,7 +212,7 @@ export function DashboardFilters({
   }
 
   return (
-    <section ref={filtersRef} className="rounded-lg border border-line bg-white p-5 shadow-soft">
+    <section ref={filtersRef} className="rounded-lg border border-line bg-white/95 p-5 shadow-soft">
       <div className="grid gap-5 md:grid-cols-2">
         <SearchableMultiSelect
           label="Рівень закладу освіти"
@@ -336,7 +336,7 @@ export function DashboardFilters({
         ) : null}
       </div>
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <label className="inline-flex w-fit items-center gap-2 rounded-md border border-line bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700">
+        <label className="inline-flex w-fit items-center gap-2 rounded-md border border-brand-100 bg-brand-50/60 px-2.5 py-1.5 text-sm text-slate-700">
           <input
             type="checkbox"
             checked={draft.includeBlockedInstitutions}
@@ -365,7 +365,7 @@ export function DashboardFilters({
           </Button>
         </div>
       </div>
-      <p className="mt-3 rounded-md border border-line bg-slate-50 px-3 py-2 text-xs leading-5 text-muted">
+      <p className="mt-3 rounded-md border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs leading-5 text-muted">
         <span className="font-semibold italic">Примітка:</span> для узгодженого відображення даних історичні записи з рівнем «спеціаліст» віднесено до категорії
         «магістр», а записи з рівнями «молодший бакалавр» і «молодший спеціаліст» — до категорії «фаховий молодший
         бакалавр».
@@ -378,7 +378,7 @@ function DisabledFilterNotice({ label, text }: { label: string; text: string }) 
   return (
     <div className="block">
       <span className="text-sm font-medium text-slate-700">{label}</span>
-      <div className="mt-1 rounded-md border border-line bg-slate-50 px-3 py-2 text-sm text-muted">
+      <div className="mt-1 rounded-md border border-line bg-slate-50/80 px-3 py-2 text-sm text-muted">
         {text}
       </div>
     </div>
@@ -447,16 +447,16 @@ function SearchableMultiSelect({
     <div className="block">
       <span className="text-sm font-medium text-slate-700">{label}</span>
       <details ref={detailsRef} className="group relative mt-1">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md border border-line bg-white px-3 py-2 text-sm outline-none hover:bg-slate-50 focus:border-brand-500">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md border border-line bg-white px-3 py-2 text-sm shadow-sm outline-none transition hover:border-brand-200 hover:bg-brand-50/50 focus:border-brand-500">
           <span className="truncate">{labelText}</span>
           <span className="text-xs text-muted group-open:rotate-180">▼</span>
         </summary>
-        <div className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-md border border-line bg-white p-2 shadow-lg">
+        <div className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-md border border-line bg-white p-2 shadow-dropdown">
           {!disableSearch ? (
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="mb-2 w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-brand-500"
+              className="mb-2 w-full rounded-md border border-line px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               placeholder="Пошук у списку"
             />
           ) : null}
@@ -465,7 +465,7 @@ function SearchableMultiSelect({
               type="button"
               onClick={resetSelection}
               disabled={!selectedValues.length}
-              className="mb-2 w-full rounded-md border border-line px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
+              className="mb-2 w-full rounded-md border border-line px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-brand-200 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-45"
             >
               Скинути
             </button>

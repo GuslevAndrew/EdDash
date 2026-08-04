@@ -116,22 +116,22 @@ export function InstitutionMultiSelect({
     <div className="block">
       <span className="text-sm font-medium text-slate-700">Заклад освіти</span>
       <details ref={detailsRef} className="group relative mt-1">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md border border-line bg-white px-3 py-2 text-sm outline-none hover:bg-slate-50 focus:border-brand-500">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md border border-line bg-white px-3 py-2 text-sm shadow-sm outline-none transition hover:border-brand-200 hover:bg-brand-50/50 focus:border-brand-500">
           <span className="truncate">{label}</span>
           <span className="text-xs text-muted group-open:rotate-180">▼</span>
         </summary>
-        <div className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-md border border-line bg-white p-2 shadow-lg">
+        <div className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-md border border-line bg-white p-2 shadow-dropdown">
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="mb-2 w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-brand-500"
+            className="mb-2 w-full rounded-md border border-line px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             placeholder="Пошук у списку: введіть перші три літери назви закладу освіти"
           />
           <button
             type="button"
             onClick={resetSelection}
             disabled={!selectedIds.length}
-            className="mb-2 w-full rounded-md border border-line px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
+            className="mb-2 w-full rounded-md border border-line px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-brand-200 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-45"
           >
             Скинути
           </button>

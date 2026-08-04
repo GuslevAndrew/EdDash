@@ -42,11 +42,11 @@ export function RegionFilter({ regions, selectedRegionIds }: RegionFilterProps) 
     <div className="block">
       <span className="text-sm font-medium text-slate-700">Регіон</span>
       <details ref={detailsRef} className="group relative mt-1">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md border border-line bg-white px-3 py-2 text-sm outline-none hover:bg-slate-50 focus:border-brand-500">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md border border-line bg-white px-3 py-2 text-sm shadow-sm outline-none transition hover:border-brand-200 hover:bg-brand-50/50 focus:border-brand-500">
           <span className="truncate">{label}</span>
           <span className="text-xs text-muted group-open:rotate-180">▼</span>
         </summary>
-        <div className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-md border border-line bg-white p-2 shadow-lg">
+        <div className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-md border border-line bg-white p-2 shadow-dropdown">
           <label className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
             <input
               type="checkbox"
@@ -74,7 +74,7 @@ export function RegionFilter({ regions, selectedRegionIds }: RegionFilterProps) 
             <button
               type="button"
               onClick={() => setSelectedIds([])}
-              className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-slate-50"
+              className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-800"
             >
               Скинути
             </button>

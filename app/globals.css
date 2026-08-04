@@ -4,15 +4,17 @@
 
 :root {
   color-scheme: light;
-  background: #f8fafc;
+  background: #f5f7fb;
 }
 
 body {
   margin: 0;
-  background: #f8fafc;
+  background:
+    linear-gradient(180deg, rgba(239, 246, 255, 0.72) 0%, rgba(248, 250, 252, 0.94) 320px, #f8fafc 100%);
   color: #111827;
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
@@ -38,6 +40,34 @@ select,
 textarea,
 summary {
   outline-color: #2563eb;
+}
+
+:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #eef2f7;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #b7c4d7;
+  border: 2px solid #eef2f7;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8fa3bd;
 }
 
 table,

@@ -5,10 +5,10 @@ import { NavLink } from "@/components/layout/NavLink";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col bg-eddash-bg">
-      <header className="border-b border-line bg-white/95">
-        <div className="h-1 bg-brand-600" />
-        <div className="mx-auto flex max-w-7xl flex-col items-start gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+    <div className="flex min-h-screen flex-col bg-transparent">
+      <header className="sticky top-0 z-40 border-b border-line/80 bg-white/90 backdrop-blur">
+        <div className="h-1 bg-gradient-to-r from-brand-700 via-brand-600 to-emerald-500" />
+        <div className="mx-auto flex max-w-7xl flex-col items-start gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <Link href="/" className="inline-flex items-center">
             <Image
               src="/brand/eddash-logo.png"
@@ -20,7 +20,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className="h-10 w-auto object-contain"
             />
           </Link>
-          <nav className="flex flex-wrap items-center gap-1.5 text-sm font-medium sm:gap-2">
+          <nav className="flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-200/80 bg-slate-50/80 p-1 text-sm font-medium sm:gap-1">
             <NavLink href="/dashboard">
               Дашборд
             </NavLink>

@@ -46,7 +46,7 @@ export default async function HomePage() {
 
   return (
     <AppShell>
-      <section className="border-b border-line bg-white">
+      <section className="border-b border-line bg-white/90">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-16">
           <div className="flex flex-col justify-center">
             <p className="text-sm font-semibold uppercase tracking-wide text-brand-700">Сервіс використовує відкриті офіційні дані</p>
@@ -63,14 +63,14 @@ export default async function HomePage() {
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link className="rounded-md bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-700" href="/dashboard">
+              <Link className="rounded-md bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2" href="/dashboard">
                 Почати
               </Link>
             </div>
           </div>
 
           <div className="flex items-center justify-center lg:justify-end">
-            <div className="w-full max-w-md rounded-[18px] border border-line bg-slate-50 p-6 shadow-soft">
+            <div className="w-full max-w-md rounded-lg border border-line bg-slate-50/80 p-6 shadow-soft">
               <Image
                 src="/brand/eddash-logo.png"
                 alt="EdDash"
@@ -81,11 +81,11 @@ export default async function HomePage() {
                 className="h-auto w-full object-contain"
               />
               <div className="mt-8 grid gap-3 text-sm leading-6 text-slate-700">
-                <div className="rounded-lg border border-line bg-white p-4">
+                <div className="rounded-lg border border-line bg-white p-4 shadow-sm">
                   <p className="font-semibold text-ink">Останнє успішне оновлення</p>
                   <p className="mt-1 text-slate-600">{formatDate(lastImport?.finishedAt)}</p>
                 </div>
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm">
                   Дані мають інформаційно-аналітичний характер. EdDash не є офіційним сервісом ЄДЕБО.
                 </div>
               </div>
@@ -109,8 +109,9 @@ export default async function HomePage() {
             <Link
               key={item.title}
               href={item.href}
-              className="group rounded-[14px] border border-line bg-white p-5 shadow-sm transition hover:border-brand-100 hover:shadow-soft"
+              className="group rounded-lg border border-line bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-soft"
             >
+              <div className="mb-4 h-1.5 w-10 rounded-full bg-brand-100 transition group-hover:bg-brand-600" />
               <h3 className="text-lg font-semibold text-ink">{item.title}</h3>
               <p className="mt-3 text-sm leading-6 text-slate-600">{item.text}</p>
               <span className="mt-5 inline-flex text-sm font-semibold text-brand-700 group-hover:text-brand-800">{item.action}</span>

@@ -299,7 +299,7 @@ export function InstitutionsPageClient() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <section className="mb-6 rounded-lg border border-line bg-white p-6 shadow-soft">
+      <section className="mb-6 rounded-lg border border-line bg-white/95 p-6 shadow-soft">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700">
           Інформація для вступників та дослідників.
         </p>
@@ -311,7 +311,7 @@ export function InstitutionsPageClient() {
         </p>
       </section>
 
-      <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-soft">
+      <section className="mb-6 rounded-lg border border-line bg-white/95 p-5 shadow-soft">
         {filtersError ? <p className="mb-4 rounded-md border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">{filtersError}</p> : null}
         {filters ? (
           <form key={queryString} className="grid gap-5" action="/institutions">
@@ -357,7 +357,7 @@ export function InstitutionsPageClient() {
                 <select
                   name="date"
                   defaultValue={selectedSnapshotDateValue}
-                  className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand-500"
+                  className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm shadow-sm outline-none transition hover:border-brand-200 hover:bg-brand-50/50 focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                 >
                   {filters.snapshotDates.map((snapshotDate) => (
                     <option key={snapshotDate} value={snapshotDate}>
@@ -415,7 +415,7 @@ export function InstitutionsPageClient() {
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <label className="inline-flex w-fit items-center gap-2 rounded-md border border-line bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700">
+              <label className="inline-flex w-fit items-center gap-2 rounded-md border border-brand-100 bg-brand-50/60 px-2.5 py-1.5 text-sm text-slate-700">
                 <input
                   type="checkbox"
                   name="showBlocked"
@@ -427,15 +427,15 @@ export function InstitutionsPageClient() {
               </label>
 
               <div className="flex flex-wrap items-center justify-end gap-3">
-                <button className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">
+                <button className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
                   Застосувати
                 </button>
-                <Link className="rounded-md border border-line bg-white px-4 py-2 text-center text-sm font-semibold text-ink hover:bg-slate-50" href="/institutions">
+                <Link className="rounded-md border border-line bg-white px-4 py-2 text-center text-sm font-semibold text-ink shadow-none transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-800 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2" href="/institutions">
                   Скинути
                 </Link>
               </div>
             </div>
-            <p className="rounded-md border border-line bg-slate-50 px-3 py-2 text-xs leading-5 text-muted">
+            <p className="rounded-md border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs leading-5 text-muted">
               <span className="font-semibold italic">Примітка:</span> для узгодженого відображення даних історичні записи з рівнем
               «спеціаліст» віднесено до категорії «магістр», а записи з рівнями «молодший бакалавр» і «молодший
               спеціаліст» — до категорії «фаховий молодший бакалавр».
