@@ -238,7 +238,7 @@ export function RegionChartCard({
     <article className="rounded-lg border border-line bg-white p-5 shadow-soft xl:col-span-2">
       <BlockTitle title={title} helpText={helpText} />
       {data.length ? (
-        <div className="mt-4 space-y-2.5">
+        <div className="mt-5 space-y-3">
           {totalItem ? <RegionBar item={totalItem} maxValue={totalItem.value || maxValue} totalItem={totalItem} childGroupLabel={childGroupLabel} isTotal /> : null}
           {visibleData.map((item) => (
             <RegionBar key={item.name} item={item} maxValue={maxValue} totalItem={totalItem} childGroupLabel={childGroupLabel} />
@@ -319,7 +319,7 @@ function RegionSeries({
   const series = item.series?.length ? item.series : [{ label: "", value: item.value }];
   const barColor = isTotal ? "bg-slate-700" : tone === "selected" ? "bg-rose-600" : tone === "warning" ? "bg-amber-500" : "bg-brand-600";
   const trackColor = isTotal ? "bg-slate-200" : tone === "selected" ? "bg-rose-50" : tone === "warning" ? "bg-amber-50" : "bg-slate-100";
-  const height = compact ? "h-4" : isTotal ? "h-7" : "h-5";
+  const height = compact ? "h-5" : "h-7";
 
   return (
     <div className="space-y-1">
@@ -331,33 +331,27 @@ function RegionSeries({
           : totalItem?.value;
         const percent = totalValue && totalValue > 0 ? (seriesItem.value / totalValue) * 100 : null;
         return (
-          <div
-            key={seriesItem.label || item.name}
-            className={
-              isTotal && hasDateLabel
-                ? "grid gap-1.5 sm:grid-cols-[4.8rem_minmax(0,1fr)] sm:items-center"
-                : isTotal
-                  ? "block"
-                  : hasDateLabel
-                ? "grid gap-1.5 sm:grid-cols-[4.8rem_minmax(0,1fr)_7.5rem] sm:items-center"
-                : "grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-1.5"
-            }
-          >
-            {hasDateLabel ? <span className="text-[11px] font-medium leading-4 text-slate-500">{formatSeriesLabel(seriesItem.label)}</span> : null}
-            <div className={`${height} rounded-md ${trackColor}`}>
+          <div key={seriesItem.label || item.name} className={hasDateLabel ? "grid gap-2 sm:grid-cols-[5.5rem_1fr] sm:items-center" : "block"}>
+            {hasDateLabel ? <span className="text-xs font-medium text-slate-500">{formatSeriesLabel(seriesItem.label)}</span> : null}
+            <div className={`relative ${height} rounded-md ${trackColor}`}>
               <div
                 className={`flex ${height} items-center justify-end rounded-md px-2 text-xs font-semibold text-white ${barColor}`}
                 style={{ width: `${width}%`, minWidth: seriesItem.value > 0 ? "2px" : undefined, maxWidth: "100%" }}
               >
-                {isTotal ? formatNumber(seriesItem.value) : null}
+                {isTotal || width >= 24
+                  ? `${formatNumber(seriesItem.value)}${percent !== null && !isTotal ? ` (${percent.toFixed(2)}%)` : ""}`
+                  : null}
               </div>
+              {!isTotal && width < 24 ? (
+                <span
+                  className="absolute top-1/2 -translate-y-1/2 whitespace-nowrap text-xs font-semibold text-slate-700"
+                  style={{ left: `min(calc(${width}% + 0.5rem), calc(100% - 7.5rem))` }}
+                >
+                  {formatNumber(seriesItem.value)}
+                  {percent !== null ? <span className="font-medium text-slate-500"> ({percent.toFixed(2)}%)</span> : null}
+                </span>
+              ) : null}
             </div>
-            {!isTotal ? (
-              <span className="text-right text-[11px] font-semibold leading-4 text-slate-700">
-                {formatNumber(seriesItem.value)}
-                {percent !== null ? <span className="font-medium text-slate-500"> ({percent.toFixed(1)}%)</span> : null}
-              </span>
-            ) : null}
           </div>
         );
       })}
