@@ -410,14 +410,6 @@ export function InteractiveEducationMap({
               Графік показує зміну контингенту та кількості закладів освіти за вибраними фільтрами.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3 text-xs text-muted">
-            <span className="inline-flex items-center gap-2">
-              <span className="h-2.5 w-5 rounded-sm bg-amber-500" /> Контингент, ліва шкала
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <span className="h-2.5 w-5 rounded-sm bg-brand-600" /> Заклади, права шкала
-            </span>
-          </div>
         </div>
         {dynamicsError ? <p className="mt-4 rounded-md border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">{dynamicsError}</p> : null}
         {!dynamics ? (
