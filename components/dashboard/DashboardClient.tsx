@@ -138,7 +138,9 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
         ? "Кількість випускників за регіонами"
         : "Кількість здобувачів за регіонами";
   const fieldChartTitle =
-    filters.datasetType === "graduates"
+    filters.datasetType === "entrants"
+      ? "Зараховані на навчання за галуззю та спеціальністю"
+      : filters.datasetType === "graduates"
       ? "Закінчили навчання за галуззю та спеціальністю"
       : "Здобувачі за галуззю та спеціальністю";
   const dynamicsChartTitle = filters.datasetType === "graduates" ? "Випускники в динаміці" : "Контингент в динаміці";
