@@ -238,7 +238,7 @@ export function DashboardFilters({
           onReset={() => changeRegions([])}
           disableSearch
         />
-        <div className="md:col-span-2">
+        <div className={isStudentsDataset ? "md:col-span-2" : undefined}>
           <SearchableMultiSelect
             label="Заклад освіти"
             allLabel="Усі заклади"
