@@ -1,6 +1,6 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical";
+import { getCanonicalEducationLevelName, getEducationLevelNameVariants } from "@/lib/education-levels/canonical";
 import { INSTITUTION_TYPES } from "@/lib/edbo/constants";
 import { formatCanonicalSpeciality } from "@/lib/specialities/canonical";
 import { specialityCatalogSource } from "@/lib/specialities/catalog";
@@ -21,6 +21,12 @@ type DynamicSeries = {
   points: Array<{ date: string; value: number }>;
 };
 type DynamicsBreakdownKey = "institutions" | "regions" | "fields" | "specialities" | "educationLevels" | "studyForms";
+type SummaryCounts = {
+  totalStudents: number;
+  institutionsCount: number;
+  specialitiesCount: number;
+  regionsCount: number;
+};
 
 const MIN_COMPLETE_SNAPSHOT_ROWS = 10_000;
 
@@ -383,26 +389,6 @@ async function yearlyTotalsByRegionAcrossYears(
       return second.value - first.value;
     })
     .slice(0, take);
-}
-
-async function countYearlyCanonicalSpecialities(where: Prisma.YearlyOutcomeWhereInput): Promise<number> {
-  const grouped = await prisma.yearlyOutcome.groupBy({
-    by: ["specialityId"],
-    where
-  });
-  const specialityIds = grouped.map((item) => item.specialityId);
-  if (!specialityIds.length) return 0;
-
-  const rows = await prisma.speciality.findMany({
-    where: { id: { in: specialityIds } },
-    select: {
-      id: true,
-      code: true,
-      canonicalCode: true
-    }
-  });
-
-  return new Set(rows.map((row) => row.canonicalCode ?? row.code ?? String(row.id))).size;
 }
 
 async function totalsByRelation(
@@ -1060,24 +1046,129 @@ async function totalsByFieldWithSelectedSpecialities(
   return [...fieldTotals.entries()].sort(([firstCode], [secondCode]) => firstCode.localeCompare(secondCode, "uk", { numeric: true })).map(([, total]) => total);
 }
 
-async function countCanonicalSpecialities(where: Prisma.StudentSnapshotWhereInput): Promise<number> {
-  const grouped = await prisma.studentSnapshot.groupBy({
-    by: ["specialityId"],
-    where
-  });
-  const specialityIds = grouped.map((item) => item.specialityId);
-  if (!specialityIds.length) return 0;
+function toNumber(value: number | bigint | null | undefined): number {
+  return Number(value ?? 0);
+}
 
-  const rows = await prisma.speciality.findMany({
-    where: { id: { in: specialityIds } },
-    select: {
-      id: true,
-      code: true,
-      canonicalCode: true
-    }
-  });
+function getSelectedFilterValues<T>(multiValue?: T[], singleValue?: T): T[] {
+  return multiValue?.length ? multiValue : singleValue ? [singleValue] : [];
+}
 
-  return new Set(rows.map((row) => row.canonicalCode ?? row.code ?? String(row.id))).size;
+function sqlIn<T extends number | string>(values: T[]) {
+  return Prisma.join(values);
+}
+
+async function getStudentSummaryCounts(filters: Partial<DashboardFiltersInput>): Promise<SummaryCounts> {
+  const regionIds = getSelectedFilterValues(filters.regionIds, filters.regionId);
+  const institutionIds = getSelectedFilterValues(filters.institutionIds, filters.institutionId);
+  const institutionTypeCodes = getSelectedFilterValues(filters.institutionTypeCodes, filters.institutionTypeCode);
+  const fieldCodes = getSelectedFilterValues(filters.fieldCodes, filters.fieldCode);
+  const specialityCodes = getSelectedFilterValues(filters.specialityCodes, filters.specialityCode);
+  const educationLevelNames = getSelectedFilterValues(filters.educationLevelNames, filters.educationLevelName);
+  const educationLevelNameVariants = [...new Set(educationLevelNames.flatMap((name) => getEducationLevelNameVariants(name)))];
+  const entryBaseIds = getSelectedFilterValues(filters.entryBaseIds, filters.entryBaseId);
+  const studyFormIds = getSelectedFilterValues(filters.studyFormIds, filters.studyFormId);
+  const conditions: Prisma.Sql[] = [];
+
+  if (filters.snapshotDate) conditions.push(Prisma.sql`s."snapshotDate" = ${new Date(filters.snapshotDate)}`);
+  if (regionIds.length) conditions.push(Prisma.sql`s."regionId" IN (${sqlIn(regionIds)})`);
+  if (institutionIds.length) conditions.push(Prisma.sql`s."institutionId" IN (${sqlIn(institutionIds)})`);
+  if (institutionTypeCodes.length) conditions.push(Prisma.sql`i."institutionTypeCode" IN (${sqlIn(institutionTypeCodes)})`);
+  if (!filters.includeBlockedInstitutions) conditions.push(Prisma.sql`i."blockedAt" IS NULL`);
+  if (fieldCodes.length) conditions.push(Prisma.sql`sp."canonicalFieldCode" IN (${sqlIn(fieldCodes)})`);
+  if (specialityCodes.length) conditions.push(Prisma.sql`sp."canonicalCode" IN (${sqlIn(specialityCodes)})`);
+  if (filters.specialityId) conditions.push(Prisma.sql`s."specialityId" = ${filters.specialityId}`);
+  if (educationLevelNameVariants.length) conditions.push(Prisma.sql`el."name" IN (${sqlIn(educationLevelNameVariants)})`);
+  if (!educationLevelNameVariants.length && filters.educationLevelId) conditions.push(Prisma.sql`s."educationLevelId" = ${filters.educationLevelId}`);
+  if (entryBaseIds.length) conditions.push(Prisma.sql`s."entryBaseId" IN (${sqlIn(entryBaseIds)})`);
+  if (studyFormIds.length) {
+    conditions.push(Prisma.sql`s."studyFormId" IN (${sqlIn(studyFormIds)})`);
+  } else {
+    conditions.push(Prisma.sql`sf."code" <> 'total'`);
+  }
+
+  const whereSql = conditions.length ? Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}` : Prisma.empty;
+  const rows = await prisma.$queryRaw<
+    Array<{
+      total_students: number | bigint | null;
+      institutions_count: number | bigint | null;
+      specialities_count: number | bigint | null;
+      regions_count: number | bigint | null;
+    }>
+  >(Prisma.sql`
+    SELECT
+      COALESCE(SUM(s."studentsCount"), 0) AS total_students,
+      COUNT(DISTINCT s."institutionId") AS institutions_count,
+      COUNT(DISTINCT COALESCE(sp."canonicalCode", sp."code", sp."id"::text)) AS specialities_count,
+      COUNT(DISTINCT s."regionId") AS regions_count
+    FROM "StudentSnapshot" s
+    JOIN "Institution" i ON i."id" = s."institutionId"
+    JOIN "Speciality" sp ON sp."id" = s."specialityId"
+    JOIN "EducationLevel" el ON el."id" = s."educationLevelId"
+    JOIN "StudyForm" sf ON sf."id" = s."studyFormId"
+    ${whereSql}
+  `);
+
+  const row = rows[0];
+  return {
+    totalStudents: toNumber(row?.total_students),
+    institutionsCount: toNumber(row?.institutions_count),
+    specialitiesCount: toNumber(row?.specialities_count),
+    regionsCount: toNumber(row?.regions_count)
+  };
+}
+
+async function getYearlySummaryCounts(filters: Partial<DashboardFiltersInput>): Promise<SummaryCounts> {
+  const years = getSelectedFilterValues(filters.years, filters.year);
+  const regionIds = getSelectedFilterValues(filters.regionIds, filters.regionId);
+  const institutionIds = getSelectedFilterValues(filters.institutionIds, filters.institutionId);
+  const institutionTypeCodes = getSelectedFilterValues(filters.institutionTypeCodes, filters.institutionTypeCode);
+  const fieldCodes = getSelectedFilterValues(filters.fieldCodes, filters.fieldCode);
+  const specialityCodes = getSelectedFilterValues(filters.specialityCodes, filters.specialityCode);
+  const educationLevelNames = getSelectedFilterValues(filters.educationLevelNames, filters.educationLevelName);
+  const educationLevelNameVariants = [...new Set(educationLevelNames.flatMap((name) => getEducationLevelNameVariants(name)))];
+  const entryBaseIds = getSelectedFilterValues(filters.entryBaseIds, filters.entryBaseId);
+  const conditions: Prisma.Sql[] = [Prisma.sql`y."type" = ${filters.datasetType === "graduates" ? "graduates" : "entrants"}`];
+
+  if (years.length) conditions.push(Prisma.sql`y."year" IN (${sqlIn(years)})`);
+  if (regionIds.length) conditions.push(Prisma.sql`y."regionId" IN (${sqlIn(regionIds)})`);
+  if (institutionIds.length) conditions.push(Prisma.sql`y."institutionId" IN (${sqlIn(institutionIds)})`);
+  if (institutionTypeCodes.length) conditions.push(Prisma.sql`i."institutionTypeCode" IN (${sqlIn(institutionTypeCodes)})`);
+  if (!filters.includeBlockedInstitutions) conditions.push(Prisma.sql`i."blockedAt" IS NULL`);
+  if (fieldCodes.length) conditions.push(Prisma.sql`sp."canonicalFieldCode" IN (${sqlIn(fieldCodes)})`);
+  if (specialityCodes.length) conditions.push(Prisma.sql`sp."canonicalCode" IN (${sqlIn(specialityCodes)})`);
+  if (filters.specialityId) conditions.push(Prisma.sql`y."specialityId" = ${filters.specialityId}`);
+  if (educationLevelNameVariants.length) conditions.push(Prisma.sql`el."name" IN (${sqlIn(educationLevelNameVariants)})`);
+  if (!educationLevelNameVariants.length && filters.educationLevelId) conditions.push(Prisma.sql`y."educationLevelId" = ${filters.educationLevelId}`);
+  if (entryBaseIds.length) conditions.push(Prisma.sql`y."entryBaseId" IN (${sqlIn(entryBaseIds)})`);
+
+  const rows = await prisma.$queryRaw<
+    Array<{
+      total_students: number | bigint | null;
+      institutions_count: number | bigint | null;
+      specialities_count: number | bigint | null;
+      regions_count: number | bigint | null;
+    }>
+  >(Prisma.sql`
+    SELECT
+      COALESCE(SUM(y."personsCount"), 0) AS total_students,
+      COUNT(DISTINCT y."institutionId") AS institutions_count,
+      COUNT(DISTINCT COALESCE(sp."canonicalCode", sp."code", sp."id"::text)) AS specialities_count,
+      COUNT(DISTINCT y."regionId") AS regions_count
+    FROM "YearlyOutcome" y
+    JOIN "Institution" i ON i."id" = y."institutionId"
+    JOIN "Speciality" sp ON sp."id" = y."specialityId"
+    JOIN "EducationLevel" el ON el."id" = y."educationLevelId"
+    WHERE ${Prisma.join(conditions, " AND ")}
+  `);
+
+  const row = rows[0];
+  return {
+    totalStudents: toNumber(row?.total_students),
+    institutionsCount: toNumber(row?.institutions_count),
+    specialitiesCount: toNumber(row?.specialities_count),
+    regionsCount: toNumber(row?.regions_count)
+  };
 }
 
 function getSameDatePreviousYear(value: string): Date {
@@ -1456,10 +1547,7 @@ async function getStudentDynamicsBreakdowns(
 export async function getDashboardSummary(filters: Partial<DashboardFiltersInput>) {
   if (filters.datasetType === "entrants" || filters.datasetType === "graduates") {
     const where = buildYearlyOutcomeWhere(filters);
-    const persons = await prisma.yearlyOutcome.aggregate({ where, _sum: { personsCount: true } });
-    const institutions = await prisma.yearlyOutcome.groupBy({ by: ["institutionId"], where });
-    const specialitiesCount = await countYearlyCanonicalSpecialities(where);
-    const regions = await prisma.yearlyOutcome.groupBy({ by: ["regionId"], where });
+    const counts = await getYearlySummaryCounts(filters);
 
     let previousDelta: number | null = null;
     const selectedYears = filters.years?.length ? filters.years : filters.year ? [filters.year] : [];
@@ -1475,19 +1563,13 @@ export async function getDashboardSummary(filters: Partial<DashboardFiltersInput
     }
 
     return {
-      totalStudents: persons._sum.personsCount ?? 0,
-      institutionsCount: institutions.length,
-      specialitiesCount,
-      regionsCount: regions.length,
+      ...counts,
       previousDelta
     };
   }
 
   const where = buildSnapshotWhere(filters);
-  const students = await prisma.studentSnapshot.aggregate({ where, _sum: { studentsCount: true } });
-  const institutions = await prisma.studentSnapshot.groupBy({ by: ["institutionId"], where });
-  const specialitiesCount = await countCanonicalSpecialities(where);
-  const regions = await prisma.studentSnapshot.groupBy({ by: ["regionId"], where });
+  const counts = await getStudentSummaryCounts(filters);
 
   let previousDelta: number | null = null;
   if (filters.snapshotDate) {
@@ -1505,10 +1587,7 @@ export async function getDashboardSummary(filters: Partial<DashboardFiltersInput
   }
 
   return {
-    totalStudents: students._sum.studentsCount ?? 0,
-    institutionsCount: institutions.length,
-    specialitiesCount,
-    regionsCount: regions.length,
+    ...counts,
     previousDelta
   };
 }
