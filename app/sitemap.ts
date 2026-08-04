@@ -28,12 +28,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified,
       changeFrequency: "monthly",
       priority: 0.7
-    },
-    {
-      url: `${baseUrl}/testing-center`,
-      lastModified,
-      changeFrequency: "monthly",
-      priority: 0.6
     }
   ];
 }

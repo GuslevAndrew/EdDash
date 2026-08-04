@@ -30,9 +30,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <NavLink href="/specialities">
               Галузі і спеціальності
             </NavLink>
-            <NavLink href="/testing-center">
-              Профорієнтація та тестування
-            </NavLink>
           </nav>
         </div>
       </header>
