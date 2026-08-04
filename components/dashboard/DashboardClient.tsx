@@ -137,6 +137,10 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
       : filters.datasetType === "graduates"
         ? "Кількість випускників за регіонами"
         : "Кількість здобувачів за регіонами";
+  const fieldChartTitle =
+    filters.datasetType === "graduates"
+      ? "Закінчили навчання за галуззю та спеціальністю"
+      : "Здобувачі за галуззю та спеціальністю";
   const dynamicsChartTitle = "Контингент в динаміці";
   const latestDateFilters = useMemo<DashboardFilterState>(
     () => ({
@@ -467,7 +471,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
           helpText={chartHelpTexts.regions}
         />
         <RegionChartCard
-          title="Здобувачі за галуззю та спеціальністю"
+          title={fieldChartTitle}
           data={charts.fields}
           totalLabel="Разом по галузям та спеціальностям"
           childGroupLabel="Спеціальності"
