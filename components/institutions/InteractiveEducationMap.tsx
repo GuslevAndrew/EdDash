@@ -340,7 +340,7 @@ export function InteractiveEducationMap({
           <LoadingNotice text="Оновлюю карту освіти, зачекайте декілька секунд..." />
         </div>
       ) : (
-        <div className="mt-4 overflow-hidden rounded-lg border border-line bg-slate-50 p-3">
+        <div className="relative mt-4 overflow-hidden rounded-lg border border-line bg-slate-50 p-3">
           <svg
             role="img"
             aria-label="Карта України з показниками закладів освіти та контингенту"
@@ -409,14 +409,14 @@ export function InteractiveEducationMap({
             </g>
           </svg>
           {regionsWithoutMapShape.length ? (
-            <div className="mt-3 rounded-md border border-line bg-white px-3 py-2 text-xs text-slate-700">
-              <div className="font-semibold text-slate-800">Поза картою, але враховано в підсумку</div>
-              <div className="mt-2 flex flex-wrap gap-2">
+            <div className="absolute bottom-4 left-4 max-w-[260px] rounded-md border border-line bg-white/95 px-3 py-2 text-xs text-slate-700 shadow-soft backdrop-blur">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-brand-700">Поза картою</div>
+              <div className="mt-1 space-y-1">
                 {regionsWithoutMapShape.map((region) => (
-                  <span key={region.regionId} className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1">
-                    <span className="font-semibold">{region.regionName}:</span>
-                    <span>закладів - {formatNumber(region.institutionsCount)}, осіб - {formatNumber(region.studentsCount)}</span>
-                  </span>
+                  <div key={region.regionId}>
+                    <div className="font-semibold text-slate-900">{region.regionName}</div>
+                    <div>закладів - {formatNumber(region.institutionsCount)}, осіб - {formatNumber(region.studentsCount)}</div>
+                  </div>
                 ))}
               </div>
             </div>
