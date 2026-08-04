@@ -149,18 +149,18 @@ function SpecialityNameCell({ code, name }: { code: string; name: string }) {
     <div>
       <span>{name}</span>
       {specializations.length ? (
-        <details className="group mt-1">
-          <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded py-1 text-xs font-semibold text-brand-700 hover:text-brand-900 [&::-webkit-details-marker]:hidden">
-            <span className="text-sm leading-none transition-transform group-open:rotate-90">
+        <details className="group mt-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white [&::-webkit-details-marker]:hidden">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-brand-700 shadow-sm transition-transform group-open:rotate-90">
               ›
             </span>
             <span>Спеціалізації</span>
-            <span className="text-slate-400">({specializations.length})</span>
+            <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-500 shadow-sm">{specializations.length}</span>
           </summary>
-          <ul className="mt-1 space-y-1 border-l border-slate-200 pl-3">
+          <ul className="space-y-1 border-t border-slate-200 bg-white px-3 py-2">
             {specializations.map((specialization) => (
-              <li key={`${specialization.code}-${specialization.name}`} className="grid grid-cols-[72px_1fr] gap-2 text-xs leading-5 text-slate-600">
-                <span className="font-semibold text-slate-800">{specialization.code}</span>
+              <li key={`${specialization.code}-${specialization.name}`} className="grid grid-cols-[76px_1fr] gap-2 text-xs leading-5 text-slate-700">
+                <span className="font-semibold text-brand-700">{specialization.code}</span>
                 <span>{specialization.name}</span>
               </li>
             ))}
