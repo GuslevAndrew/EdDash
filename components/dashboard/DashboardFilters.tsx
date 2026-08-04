@@ -366,7 +366,7 @@ export function DashboardFilters({
         </div>
       </div>
       <p className="mt-3 rounded-md border border-line bg-slate-50 px-3 py-2 text-xs leading-5 text-muted">
-        <span className="italic">Примітка:</span> для узгодженого відображення даних історичні записи з рівнем «спеціаліст» віднесено до категорії
+        <span className="font-semibold italic">Примітка:</span> для узгодженого відображення даних історичні записи з рівнем «спеціаліст» віднесено до категорії
         «магістр», а записи з рівнями «молодший бакалавр» і «молодший спеціаліст» — до категорії «фаховий молодший
         бакалавр».
       </p>
