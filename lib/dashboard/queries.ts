@@ -1515,7 +1515,6 @@ export async function getDashboardSummary(filters: Partial<DashboardFiltersInput
 
 export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>) {
   if (filters.datasetType === "entrants" || filters.datasetType === "graduates") {
-    const where = buildYearlyOutcomeWhere(filters);
     const institutionChartWhere = buildYearlyOutcomeWhere({
       ...filters,
       institutionId: undefined,
@@ -1562,12 +1561,6 @@ export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>
     const selectedFieldCodes = filters.fieldCodes?.length ? filters.fieldCodes : filters.fieldCode ? [filters.fieldCode] : [];
     const selectedYears = getSelectedYears(filters);
     const selectedRegionIds = filters.regionIds?.length ? filters.regionIds : filters.regionId ? [filters.regionId] : [];
-    const dynamics = await prisma.yearlyOutcome.groupBy({
-      by: ["year"],
-      where: { ...where, year: undefined },
-      _sum: { personsCount: true },
-      orderBy: { year: "asc" }
-    });
 
     const [topInstitutions, topInstitutionsTotal, regions, fields] = await Promise.all([
       yearlyTotalsByRelationAcrossYears("institutionId", institutionChartWhere, selectedYears, 250),
@@ -1582,15 +1575,11 @@ export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>
       regions,
       fields,
       specialities: [],
-      dynamics: dynamics.map((item) => ({
-        name: String(item.year),
-        value: item._sum.personsCount ?? 0
-      })),
+      dynamics: [],
       dynamicsBreakdowns: {}
     };
   }
 
-  const where = buildSnapshotWhere(filters);
   const institutionChartWhere = buildSnapshotWhere({
     ...filters,
     institutionId: undefined,
@@ -1638,13 +1627,6 @@ export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>
           fieldCodes: undefined
         })
       : null;
-  const completeSnapshotDates = await getCompleteSnapshotDates();
-  const dynamics = await prisma.studentSnapshot.groupBy({
-    by: ["snapshotDate"],
-    where: { ...where, snapshotDate: { in: completeSnapshotDates } },
-    _sum: { studentsCount: true },
-    orderBy: { snapshotDate: "asc" }
-  });
 
   const institutionSnapshotDates = filters.snapshotDates?.length
     ? filters.snapshotDates
@@ -1667,12 +1649,40 @@ export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>
     regions,
     fields,
     specialities: [],
-    dynamics: dynamics.map((item) => ({
-      name: item.snapshotDate.toISOString(),
-      value: item._sum.studentsCount ?? 0
-    })),
+    dynamics: [],
     dynamicsBreakdowns: {}
   };
+}
+
+export async function getDashboardDynamics(filters: Partial<DashboardFiltersInput>) {
+  if (filters.datasetType === "entrants" || filters.datasetType === "graduates") {
+    const where = buildYearlyOutcomeWhere(filters);
+    const dynamics = await prisma.yearlyOutcome.groupBy({
+      by: ["year"],
+      where: { ...where, year: undefined },
+      _sum: { personsCount: true },
+      orderBy: { year: "asc" }
+    });
+
+    return dynamics.map((item) => ({
+      name: String(item.year),
+      value: item._sum.personsCount ?? 0
+    }));
+  }
+
+  const where = buildSnapshotWhere(filters);
+  const completeSnapshotDates = await getCompleteSnapshotDates();
+  const dynamics = await prisma.studentSnapshot.groupBy({
+    by: ["snapshotDate"],
+    where: { ...where, snapshotDate: { in: completeSnapshotDates } },
+    _sum: { studentsCount: true },
+    orderBy: { snapshotDate: "asc" }
+  });
+
+  return dynamics.map((item) => ({
+    name: item.snapshotDate.toISOString(),
+    value: item._sum.studentsCount ?? 0
+  }));
 }
 
 export async function getDashboardDynamicsBreakdowns(

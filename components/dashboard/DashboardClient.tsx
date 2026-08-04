@@ -112,6 +112,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
   const [charts, setCharts] = useState<Charts>(defaultCharts);
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
   const [isChartsLoading, setIsChartsLoading] = useState(true);
+  const [isDynamicsLoading, setIsDynamicsLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [dynamicDateValues, setDynamicDateValues] = useState<string[]>([]);
   const [dynamicBreakdowns, setDynamicBreakdowns] = useState<DynamicsBreakdownValue[]>([]);
@@ -275,8 +276,27 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
         if (active) setIsChartsLoading(false);
       }
     }
+
+    async function loadDynamics() {
+      setIsDynamicsLoading(true);
+      try {
+        const dynamicsParams = new URLSearchParams(params);
+        dynamicsParams.set("refresh", String(Date.now()));
+        const dynamicsResponse = await fetch(`/api/dashboard/dynamics?${dynamicsParams.toString()}`, { cache: "no-store" });
+        if (!dynamicsResponse.ok) throw new Error("Dashboard dynamics API returned an error");
+        const dynamicsData = await dynamicsResponse.json();
+        if (!active) return;
+        setCharts((current) => ({ ...current, dynamics: dynamicsData.dynamics ?? [] }));
+      } catch {
+        if (active) setMessage("Не вдалося оновити динаміку. Основні показники залишилися доступними.");
+      } finally {
+        if (active) setIsDynamicsLoading(false);
+      }
+    }
     loadSummary();
-    loadCharts();
+    loadCharts().then(() => {
+      if (active) loadDynamics();
+    });
     return () => {
       active = false;
     };
@@ -471,7 +491,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
           breakdownOptions={dynamicsBreakdownOptions}
           selectedBreakdowns={dynamicBreakdowns}
           onBreakdownToggle={toggleDynamicBreakdown}
-          isBreakdownLoading={isDynamicsBreakdownLoading}
+          isBreakdownLoading={isDynamicsLoading || isDynamicsBreakdownLoading}
           helpText={chartHelpTexts.dynamics}
         />
       </section>
