@@ -260,6 +260,14 @@ export function InteractiveEducationMap({
     const entries = data?.regions.map((region) => [normalizeRegionName(region.regionName), region] as const) ?? [];
     return new Map(entries);
   }, [data?.regions]);
+  const regionsShownOnMap = useMemo(
+    () => new Set(regions.map((region) => normalizeRegionName(svgRegionNames[region.id] ?? region.name))),
+    [regions]
+  );
+  const regionsWithoutMapShape = useMemo(
+    () => (data?.regions ?? []).filter((region) => !regionsShownOnMap.has(normalizeRegionName(region.regionName))),
+    [data?.regions, regionsShownOnMap]
+  );
 
   const totalInstitutions = data?.regions.reduce((sum, region) => sum + region.institutionsCount, 0) ?? 0;
   const totalStudents = data?.regions.reduce((sum, region) => sum + region.studentsCount, 0) ?? 0;
@@ -400,6 +408,19 @@ export function InteractiveEducationMap({
               })}
             </g>
           </svg>
+          {regionsWithoutMapShape.length ? (
+            <div className="mt-3 rounded-md border border-line bg-white px-3 py-2 text-xs text-slate-700">
+              <div className="font-semibold text-slate-800">Поза картою, але враховано в підсумку</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {regionsWithoutMapShape.map((region) => (
+                  <span key={region.regionId} className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1">
+                    <span className="font-semibold">{region.regionName}:</span>
+                    <span>закладів - {formatNumber(region.institutionsCount)}, осіб - {formatNumber(region.studentsCount)}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
       <label className="mt-3 inline-flex w-fit items-center gap-2 rounded-md border border-line bg-slate-50 px-2.5 py-1.5 text-sm font-medium text-slate-700">
