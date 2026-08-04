@@ -71,19 +71,6 @@ const allDynamicsBreakdownOptions: Array<{ value: DynamicsBreakdownValue; label:
   { value: "studyForms", label: "По формах навчання" }
 ];
 
-const summaryHelpTexts = {
-  total:
-    "Показує загальну кількість осіб у вибраному стані навчання відповідно до застосованих фільтрів. Щоб змінити показник, налаштуйте фільтри та натисніть «Застосувати».",
-  institutions:
-    "Показує кількість закладів освіти, які мають дані за вибраними фільтрами. Якщо змінити регіон, рівень закладу або інші фільтри, кількість оновиться.",
-  specialities:
-    "Показує кількість спеціальностей, представлених у даних за поточними фільтрами. Для деталізації оберіть галузь знань або конкретні спеціальності.",
-  regions:
-    "Показує кількість регіонів, у яких є дані за вибраними фільтрами. Якщо обрати один або кілька регіонів, показник відобразить саме доступний набір.",
-  delta:
-    "Показує зміну до аналогічного зрізу торік або до попереднього року залежно від вибраного стану навчання. Для коректного порівняння має бути доступний відповідний період."
-};
-
 const chartHelpTexts = {
   institutions:
     "Блок показує заклади освіти за кількістю осіб у вибраному стані навчання. За замовчуванням видно перші позиції за найбільшим значенням, кнопку «Показати ще» можна використати для розширення списку. Якщо у фільтрі обрати конкретні заклади, вони піднімуться нагору і будуть виділені окремим кольором.",
@@ -435,19 +422,18 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
 
       {showSummaryCards ? (
         <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <StatCard title={totalLabel} value={summary?.totalStudents ?? ""} isLoading={!summary} helpText={summaryHelpTexts.total} />
-          <StatCard title="Закладів освіти" value={summary?.institutionsCount ?? ""} isLoading={!summary} helpText={summaryHelpTexts.institutions} />
-          <StatCard title="Спеціальностей" value={summary?.specialitiesCount ?? ""} isLoading={!summary} helpText={summaryHelpTexts.specialities} />
-          <StatCard title="Представлених регіонів" value={summary?.regionsCount ?? ""} isLoading={!summary} helpText={summaryHelpTexts.regions} />
+          <StatCard title={totalLabel} value={summary?.totalStudents ?? ""} isLoading={!summary} />
+          <StatCard title="Закладів освіти" value={summary?.institutionsCount ?? ""} isLoading={!summary} />
+          <StatCard title="Спеціальностей" value={summary?.specialitiesCount ?? ""} isLoading={!summary} />
+          <StatCard title="Представлених регіонів" value={summary?.regionsCount ?? ""} isLoading={!summary} />
           {summary ? (
             <DeltaStatCard
               delta={summary.previousDelta}
               snapshotDate={filters.snapshotDate}
               year={filters.years.length === 1 ? filters.years[0] : filters.year}
-              helpText={summaryHelpTexts.delta}
             />
           ) : (
-            <StatCard title="Зміна до аналогічного зрізу" value="" isLoading helpText={summaryHelpTexts.delta} />
+            <StatCard title="Зміна до аналогічного зрізу" value="" isLoading />
           )}
         </section>
       ) : null}
