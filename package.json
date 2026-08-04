@@ -23,6 +23,7 @@
     "edbo:fix:duplicated-students": "tsx scripts/fix-duplicated-student-snapshots.ts",
     "db:indexes": "tsx scripts/apply-production-indexes.ts",
     "db:audit": "tsx scripts/audit-data-health.ts",
+    "dashboard:cache": "tsx scripts/refresh-dashboard-api-cache.ts",
     "edbo:outcomes": "tsx scripts/import-yearly-outcomes.ts",
     "edbo:outcomes:broad": "tsx scripts/import-yearly-outcomes-broad.ts",
     "edbo:outcomes:grid": "tsx scripts/import-yearly-outcomes-grid.ts",
