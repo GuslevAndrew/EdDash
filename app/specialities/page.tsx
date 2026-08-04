@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/AppShell";
 import { specialityCatalogSource } from "@/lib/specialities/catalog";
+import { specializationsBySpecialityCode } from "@/lib/specialities/specializations";
 
 export const metadata: Metadata = {
   title: "Галузі і спеціальності",
@@ -112,7 +113,9 @@ export default function SpecialitiesPage() {
                         ) : null}
                       </td>
                       <td className="px-3 py-3 align-top font-semibold text-ink">{item.code}</td>
-                      <td className="px-3 py-3 align-top text-slate-700">{item.name}</td>
+                      <td className="px-3 py-3 align-top text-slate-700">
+                        <SpecialityNameCell code={item.code} name={item.name} />
+                      </td>
                       {levelLabels.map((level) => (
                         <td key={level.key} className="px-3 py-3 text-center align-top">
                           {item.levels[level.key] ? <span className="font-bold text-emerald-700">+</span> : <span className="text-slate-300">—</span>}
@@ -135,6 +138,34 @@ function SummaryCard({ title, value }: { title: string; value: number | string }
     <div className="rounded-lg border border-line bg-white p-5 shadow-soft">
       <p className="text-sm font-medium text-muted">{title}</p>
       <p className="mt-2 text-2xl font-bold text-ink">{value}</p>
+    </div>
+  );
+}
+
+function SpecialityNameCell({ code, name }: { code: string; name: string }) {
+  const specializations = specializationsBySpecialityCode[code as keyof typeof specializationsBySpecialityCode] ?? [];
+
+  return (
+    <div>
+      <span>{name}</span>
+      {specializations.length ? (
+        <details className="group mt-2 rounded-md border border-brand-100 bg-brand-50/70">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-semibold text-brand-800 [&::-webkit-details-marker]:hidden">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-brand-700 shadow-sm transition-transform group-open:rotate-90">
+              ›
+            </span>
+            <span>Спеціалізації: {specializations.length}</span>
+          </summary>
+          <ul className="space-y-1 border-t border-brand-100 bg-white px-3 py-2">
+            {specializations.map((specialization) => (
+              <li key={`${specialization.code}-${specialization.name}`} className="grid grid-cols-[72px_1fr] gap-2 text-xs leading-5 text-slate-700">
+                <span className="font-semibold text-brand-700">{specialization.code}</span>
+                <span>{specialization.name}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
     </div>
   );
 }
