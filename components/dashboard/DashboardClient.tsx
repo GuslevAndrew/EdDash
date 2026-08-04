@@ -2,19 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  EducationLevelPieGrid,
   ExpandableInstitutionChartCard,
   LineChartCard,
   RegionChartCard,
   type ChartDatum,
   type DynamicsBreakdownValue,
-  type DynamicsSeries,
-  type PieChartGroup
+  type DynamicsSeries
 } from "./ChartCard";
 import { DashboardFilters, emptyFilters, type DashboardFilterState, type FilterOptions } from "./DashboardFilters";
 import { DeltaStatCard, StatCard } from "./StatCard";
 import { LoadingNotice } from "@/components/ui/LoadingNotice";
-import { formatDate } from "@/lib/utils/format";
 
 type Summary = {
   totalStudents: number;
@@ -30,8 +27,6 @@ type Charts = {
   regions: ChartDatum[];
   fields: ChartDatum[];
   specialities: ChartDatum[];
-  educationLevels: ChartDatum[];
-  educationLevelBreakdowns: PieChartGroup[];
   dynamics: ChartDatum[];
   dynamicsBreakdowns?: Partial<Record<DynamicsBreakdownValue, DynamicsSeries[]>>;
 };
@@ -42,8 +37,6 @@ const defaultCharts: Charts = {
   regions: [],
   fields: [],
   specialities: [],
-  educationLevels: [],
-  educationLevelBreakdowns: [],
   dynamics: [],
   dynamicsBreakdowns: {}
 };
@@ -143,34 +136,6 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
     [filters.datasetType, options]
   );
   const showSummaryCards = !isStudentsDataset || filters.snapshotDates.length <= 1;
-  const selectedEducationLevelYear = useMemo(() => {
-    const years = filters.years.length ? filters.years : filters.year ? [filters.year] : [];
-    return [...years].sort((first, second) => Number(second) - Number(first))[0] ?? "";
-  }, [filters.year, filters.years]);
-  const hasEducationLevelContextFilters = [
-    filters.institutionTypeCodes,
-    filters.regionIds,
-    filters.institutionIds,
-    filters.fieldCodes,
-    filters.specialityCodes,
-    filters.educationLevelNames,
-    filters.entryBaseIds,
-    filters.studyFormIds
-  ].some((items) => items.length > 0);
-  const educationLevelPeriodLabel = hasEducationLevelContextFilters
-    ? isStudentsDataset
-      ? `станом на ${formatDate(filters.snapshotDate)}`
-      : `за ${selectedEducationLevelYear} рік`
-    : "";
-  const educationLevelTitle = `Розподіл за освітніми ступенями${educationLevelPeriodLabel ? ` ${educationLevelPeriodLabel}` : ""}`;
-  const educationLevelDescription = isStudentsDataset
-    ? filters.snapshotDates.length > 1
-      ? "Ця інфографіка може показувати дані тільки на одну конкретну дату. Через вибір кількох дат показано найсвіжіший обраний зріз."
-      : "Ця інфографіка показує розподіл тільки на одну конкретну дату."
-    : filters.years.length > 1
-      ? "Ця інфографіка може показувати дані тільки за один конкретний рік. Через вибір кількох років показано найсвіжіший обраний рік."
-      : "Ця інфографіка показує розподіл тільки за один конкретний рік.";
-
   const params = useMemo(() => {
     const search = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
@@ -493,11 +458,6 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
           selectedBreakdowns={dynamicBreakdowns}
           onBreakdownToggle={toggleDynamicBreakdown}
           isBreakdownLoading={isDynamicsBreakdownLoading}
-        />
-        <EducationLevelPieGrid
-          title={educationLevelTitle}
-          description={educationLevelDescription}
-          groups={charts.educationLevelBreakdowns}
         />
       </section>
     </div>

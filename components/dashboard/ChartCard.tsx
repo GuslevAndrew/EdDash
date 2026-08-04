@@ -5,12 +5,9 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   Line,
   LineChart,
   Legend,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -28,13 +25,6 @@ export type ChartDatum = {
   children?: ChartDatum[];
 };
 
-export type PieChartGroup = {
-  title: string;
-  description?: string;
-  data: ChartDatum[];
-};
-
-const colors = ["#2563eb", "#059669", "#f59e0b", "#dc2626", "#7c3aed", "#0891b2", "#4f46e5", "#16a34a"];
 const initialVisibleBars = 10;
 const visibleBarsStep = 10;
 
@@ -770,94 +760,4 @@ function useAutoCloseDetails() {
   }, []);
 
   return detailsRef;
-}
-
-export function PieChartCard({ title, data }: { title: string; data: ChartDatum[] }) {
-  return (
-    <article className="rounded-lg border border-line bg-white p-5 shadow-soft">
-      <h2 className="text-base font-semibold text-ink">{title}</h2>
-      {data.length ? (
-        <div className="mt-4 h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie data={data} dataKey="value" nameKey="name" outerRadius={96} label={(item) => item.name}>
-                {data.map((_, index) => (
-                  <Cell key={index} fill={colors[index % colors.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={tooltipFormatter} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      ) : (
-        <EmptyState title="Немає даних для розподілу" />
-      )}
-    </article>
-  );
-}
-
-export function EducationLevelPieGrid({ title, description, groups }: { title: string; description?: string; groups: PieChartGroup[] }) {
-  return (
-    <article className="rounded-lg border border-line bg-white p-5 shadow-soft xl:col-span-2">
-      <h2 className="text-base font-semibold text-ink">{title}</h2>
-      {description ? <p className="mt-1 text-xs leading-5 text-muted">{description}</p> : null}
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        {groups.map((group) => {
-          const total = group.data.reduce((sum, item) => sum + item.value, 0);
-
-          return (
-          <div key={group.title} className="rounded-md border border-line bg-slate-50/60 p-4">
-            <div>
-              <h3 className="text-sm font-semibold text-ink">{group.title}</h3>
-              {group.data.length && group.description ? <p className="mt-1 text-xs leading-5 text-muted">{group.description}</p> : null}
-            </div>
-            {group.data.length ? (
-              <>
-                <div className="mt-3 h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={group.data} dataKey="value" nameKey="name" innerRadius={42} outerRadius={82} paddingAngle={1}>
-                        {group.data.map((_, index) => (
-                          <Cell key={index} fill={colors[index % colors.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={tooltipFormatter} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-3 space-y-1.5">
-                  <div className="grid grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md bg-white px-2 py-1.5 text-xs">
-                    <span className="h-2.5 w-2.5 rounded-full bg-slate-700" />
-                    <span className="font-semibold text-slate-900">Разом</span>
-                    <span className="font-bold text-slate-900">{formatNumber(total)}</span>
-                  </div>
-                  {group.data.map((item, index) => {
-                    const percent = total > 0 ? (item.value / total) * 100 : 0;
-
-                    return (
-                      <div key={item.name} className="grid grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 text-xs">
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colors[index % colors.length] }} />
-                        <span className="truncate text-slate-700">{item.name}</span>
-                        <span className="font-semibold text-slate-900">
-                          {formatNumber(item.value)}
-                          <span className="font-medium text-slate-500"> ({percent.toFixed(1)}%)</span>
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <div className="mt-3 flex min-h-48 items-center justify-center rounded-xl border border-dashed border-line bg-white px-6 py-8 text-center">
-                <p className="max-w-xs text-sm font-medium leading-6 text-slate-700">
-                  {group.description ?? "Оберіть відповідний фільтр, щоб побачити розподіл."}
-                </p>
-              </div>
-            )}
-          </div>
-          );
-        })}
-      </div>
-    </article>
-  );
 }

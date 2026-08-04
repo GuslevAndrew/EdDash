@@ -21,11 +21,6 @@ type DynamicSeries = {
   points: Array<{ date: string; value: number }>;
 };
 type DynamicsBreakdownKey = "institutions" | "regions" | "fields" | "specialities" | "educationLevels" | "studyForms";
-type EducationLevelBreakdown = {
-  title: string;
-  description?: string;
-  data: NamedTotal[];
-};
 
 const MIN_COMPLETE_SNAPSHOT_ROWS = 10_000;
 
@@ -189,31 +184,6 @@ async function yearlyTotalsByRelation(
     name: names.get(item[by]) ?? "Невідомо",
     value: item._sum.personsCount ?? 0
   }));
-}
-
-async function yearlyTotalsByEducationLevel(where: Prisma.YearlyOutcomeWhereInput, take: number): Promise<NamedTotal[]> {
-  const grouped = await prisma.yearlyOutcome.groupBy({
-    by: ["educationLevelId"],
-    where,
-    _sum: { personsCount: true }
-  });
-  const educationLevelIds = grouped.map((item) => item.educationLevelId);
-  const educationLevels = await prisma.educationLevel.findMany({
-    where: { id: { in: educationLevelIds } },
-    select: { id: true, name: true }
-  });
-  const educationLevelById = new Map(educationLevels.map((item) => [item.id, item]));
-  const totals = new Map<string, NamedTotal>();
-
-  for (const item of grouped) {
-    const educationLevel = educationLevelById.get(item.educationLevelId);
-    const name = getCanonicalEducationLevelName(educationLevel?.name ?? "Невідомо");
-    const current = totals.get(name) ?? { name, value: 0 };
-    current.value += item._sum.personsCount ?? 0;
-    totals.set(name, current);
-  }
-
-  return [...totals.values()].sort((first, second) => second.value - first.value).slice(0, take);
 }
 
 function getSelectedYears(filters: Partial<DashboardFiltersInput>): number[] {
@@ -1090,166 +1060,6 @@ async function totalsByFieldWithSelectedSpecialities(
   return [...fieldTotals.entries()].sort(([firstCode], [secondCode]) => firstCode.localeCompare(secondCode, "uk", { numeric: true })).map(([, total]) => total);
 }
 
-async function totalsByEducationLevel(where: Prisma.StudentSnapshotWhereInput, take: number): Promise<NamedTotal[]> {
-  const grouped = await prisma.studentSnapshot.groupBy({
-    by: ["educationLevelId"],
-    where,
-    _sum: { studentsCount: true }
-  });
-  const educationLevelIds = grouped.map((item) => item.educationLevelId);
-  const educationLevels = await prisma.educationLevel.findMany({
-    where: { id: { in: educationLevelIds } },
-    select: { id: true, name: true }
-  });
-  const educationLevelById = new Map(educationLevels.map((item) => [item.id, item]));
-  const totals = new Map<string, NamedTotal>();
-
-  for (const item of grouped) {
-    const educationLevel = educationLevelById.get(item.educationLevelId);
-    const name = getCanonicalEducationLevelName(educationLevel?.name ?? "Невідомо");
-    const current = totals.get(name) ?? { name, value: 0 };
-    current.value += item._sum.studentsCount ?? 0;
-    totals.set(name, current);
-  }
-
-  return [...totals.values()].sort((first, second) => second.value - first.value).slice(0, take);
-}
-
-async function getStudentEducationLevelBreakdowns(filters: Partial<DashboardFiltersInput>): Promise<EducationLevelBreakdown[]> {
-  const baseFilters = {
-    ...filters,
-    educationLevelId: undefined,
-    educationLevelName: undefined,
-    educationLevelNames: undefined
-  };
-  const selectedRegionIds = filters.regionIds?.length ? filters.regionIds : filters.regionId ? [filters.regionId] : [];
-  const selectedInstitutionIds = filters.institutionIds?.length ? filters.institutionIds : filters.institutionId ? [filters.institutionId] : [];
-  const selectedFieldCodes = filters.fieldCodes?.length ? filters.fieldCodes : filters.fieldCode ? [filters.fieldCode] : [];
-  const selectedSpecialityCodes = filters.specialityCodes?.length
-    ? filters.specialityCodes
-    : filters.specialityCode
-      ? [filters.specialityCode]
-      : [];
-
-  const [regions, institutions, fields, specialities] = await Promise.all([
-    selectedRegionIds.length
-      ? totalsByEducationLevel(
-          buildSnapshotWhere({
-            ...baseFilters,
-            institutionId: undefined,
-            institutionIds: undefined
-          }),
-          10
-        )
-      : Promise.resolve([]),
-    selectedInstitutionIds.length ? totalsByEducationLevel(buildSnapshotWhere(baseFilters), 10) : Promise.resolve([]),
-    selectedFieldCodes.length
-      ? totalsByEducationLevel(
-          buildSnapshotWhere({
-            ...baseFilters,
-            specialityId: undefined,
-            specialityCode: undefined,
-            specialityCodes: undefined
-          }),
-          10
-        )
-      : Promise.resolve([]),
-    selectedSpecialityCodes.length ? totalsByEducationLevel(buildSnapshotWhere(baseFilters), 10) : Promise.resolve([])
-  ]);
-
-  return [
-    {
-      title: "За обраним регіоном",
-      description: selectedRegionIds.length ? "Розподіл у межах обраного регіону або регіонів." : "Оберіть регіон у фільтрах.",
-      data: regions
-    },
-    {
-      title: "За обраним закладом освіти",
-      description: selectedInstitutionIds.length ? "Розподіл у межах обраного закладу або закладів." : "Оберіть заклад освіти у фільтрах.",
-      data: institutions
-    },
-    {
-      title: "За обраною галуззю",
-      description: selectedFieldCodes.length ? "Розподіл у межах обраної галузі або галузей." : "Оберіть галузь знань у фільтрах.",
-      data: fields
-    },
-    {
-      title: "За обраною спеціальністю",
-      description: selectedSpecialityCodes.length ? "Розподіл у межах обраної спеціальності або спеціальностей." : "Оберіть спеціальність у фільтрах.",
-      data: specialities
-    }
-  ];
-}
-
-async function getYearlyOutcomeEducationLevelBreakdowns(filters: Partial<DashboardFiltersInput>): Promise<EducationLevelBreakdown[]> {
-  const selectedYear = getSelectedYears(filters)[0];
-  const baseFilters = {
-    ...filters,
-    year: selectedYear,
-    years: [],
-    educationLevelId: undefined,
-    educationLevelName: undefined,
-    educationLevelNames: undefined
-  };
-  const selectedRegionIds = filters.regionIds?.length ? filters.regionIds : filters.regionId ? [filters.regionId] : [];
-  const selectedInstitutionIds = filters.institutionIds?.length ? filters.institutionIds : filters.institutionId ? [filters.institutionId] : [];
-  const selectedFieldCodes = filters.fieldCodes?.length ? filters.fieldCodes : filters.fieldCode ? [filters.fieldCode] : [];
-  const selectedSpecialityCodes = filters.specialityCodes?.length
-    ? filters.specialityCodes
-    : filters.specialityCode
-      ? [filters.specialityCode]
-      : [];
-
-  const [regions, institutions, fields, specialities] = await Promise.all([
-    selectedRegionIds.length
-      ? yearlyTotalsByEducationLevel(
-          buildYearlyOutcomeWhere({
-            ...baseFilters,
-            institutionId: undefined,
-            institutionIds: undefined
-          }),
-          10
-        )
-      : Promise.resolve([]),
-    selectedInstitutionIds.length ? yearlyTotalsByEducationLevel(buildYearlyOutcomeWhere(baseFilters), 10) : Promise.resolve([]),
-    selectedFieldCodes.length
-      ? yearlyTotalsByEducationLevel(
-          buildYearlyOutcomeWhere({
-            ...baseFilters,
-            specialityId: undefined,
-            specialityCode: undefined,
-            specialityCodes: undefined
-          }),
-          10
-        )
-      : Promise.resolve([]),
-    selectedSpecialityCodes.length ? yearlyTotalsByEducationLevel(buildYearlyOutcomeWhere(baseFilters), 10) : Promise.resolve([])
-  ]);
-
-  return [
-    {
-      title: "За обраним регіоном",
-      description: selectedRegionIds.length ? "Розподіл у межах обраного регіону або регіонів." : "Оберіть регіон у фільтрах.",
-      data: regions
-    },
-    {
-      title: "За обраним закладом освіти",
-      description: selectedInstitutionIds.length ? "Розподіл у межах обраного закладу або закладів." : "Оберіть заклад освіти у фільтрах.",
-      data: institutions
-    },
-    {
-      title: "За обраною галуззю",
-      description: selectedFieldCodes.length ? "Розподіл у межах обраної галузі або галузей." : "Оберіть галузь знань у фільтрах.",
-      data: fields
-    },
-    {
-      title: "За обраною спеціальністю",
-      description: selectedSpecialityCodes.length ? "Розподіл у межах обраної спеціальності або спеціальностей." : "Оберіть спеціальність у фільтрах.",
-      data: specialities
-    }
-  ];
-}
-
 async function countCanonicalSpecialities(where: Prisma.StudentSnapshotWhereInput): Promise<number> {
   const grouped = await prisma.studentSnapshot.groupBy({
     by: ["specialityId"],
@@ -1759,13 +1569,11 @@ export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>
       orderBy: { year: "asc" }
     });
 
-    const [topInstitutions, topInstitutionsTotal, regions, fields, educationLevels, educationLevelBreakdowns] = await Promise.all([
+    const [topInstitutions, topInstitutionsTotal, regions, fields] = await Promise.all([
       yearlyTotalsByRelationAcrossYears("institutionId", institutionChartWhere, selectedYears, 250),
       yearlyGrandTotalAcrossYears(institutionTotalWhere, selectedYears),
       yearlyTotalsByRegionAcrossYears(regionChartWhere, regionSelectedInstitutionWhere, selectedYears, selectedRegionIds),
-      yearlyTotalsByFieldWithSelectedSpecialities(fieldChartWhere, fieldSelectedSpecialityWhere, selectedFieldCodes, selectedYears),
-      yearlyTotalsByEducationLevel(where, 10),
-      getYearlyOutcomeEducationLevelBreakdowns(filters)
+      yearlyTotalsByFieldWithSelectedSpecialities(fieldChartWhere, fieldSelectedSpecialityWhere, selectedFieldCodes, selectedYears)
     ]);
 
     return {
@@ -1774,8 +1582,6 @@ export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>
       regions,
       fields,
       specialities: [],
-      educationLevels,
-      educationLevelBreakdowns,
       dynamics: dynamics.map((item) => ({
         name: String(item.year),
         value: item._sum.personsCount ?? 0
@@ -1848,13 +1654,11 @@ export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>
   const selectedSnapshotDates = getSelectedSnapshotDates(filters);
   const selectedRegionIds = filters.regionIds?.length ? filters.regionIds : filters.regionId ? [filters.regionId] : [];
   const selectedFieldCodes = filters.fieldCodes?.length ? filters.fieldCodes : filters.fieldCode ? [filters.fieldCode] : [];
-  const [topInstitutions, topInstitutionsTotal, regions, fields, educationLevels, educationLevelBreakdowns] = await Promise.all([
+  const [topInstitutions, topInstitutionsTotal, regions, fields] = await Promise.all([
     totalsByInstitutionAcrossSnapshotDates(institutionChartWhere, institutionSnapshotDates, 250),
     grandTotalAcrossSnapshotDates(institutionTotalWhere, institutionSnapshotDates),
     totalsByRegionAcrossSnapshotDates(regionChartWhere, regionSelectedInstitutionWhere, selectedSnapshotDates, selectedRegionIds),
-    totalsByFieldWithSelectedSpecialities(fieldChartWhere, fieldSelectedSpecialityWhere, selectedFieldCodes, selectedSnapshotDates),
-    totalsByEducationLevel(where, 10),
-    getStudentEducationLevelBreakdowns(filters)
+    totalsByFieldWithSelectedSpecialities(fieldChartWhere, fieldSelectedSpecialityWhere, selectedFieldCodes, selectedSnapshotDates)
   ]);
 
   return {
@@ -1863,8 +1667,6 @@ export async function getDashboardCharts(filters: Partial<DashboardFiltersInput>
     regions,
     fields,
     specialities: [],
-    educationLevels,
-    educationLevelBreakdowns,
     dynamics: dynamics.map((item) => ({
       name: item.snapshotDate.toISOString(),
       value: item._sum.studentsCount ?? 0
