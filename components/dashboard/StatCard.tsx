@@ -51,7 +51,7 @@ export function DeltaStatCard({
   year?: string;
   helpText?: string;
 }) {
-  const title = "Зміна до аналогічного зрізу";
+  const title = "Зміна";
   const previousDate = snapshotDate ? formatDate(getSameDatePreviousYear(snapshotDate)) : null;
   const previousYear = year ? String(Number(year) - 1) : null;
 
@@ -62,10 +62,10 @@ export function DeltaStatCard({
         value="Немає даних"
         note={
           previousDate
-            ? `Для поточних фільтрів немає даних на аналогічний зріз торік: ${previousDate}.`
+            ? `Для поточних фільтрів немає даних на аналогічний зріз на: ${previousDate}.`
             : previousYear
               ? `Для поточних фільтрів немає даних за попередній рік: ${previousYear}.`
-              : "Для поточних фільтрів немає даних на аналогічний зріз торік."
+              : "Для поточних фільтрів немає даних на аналогічний зріз."
         }
         helpText={helpText}
       />
@@ -79,10 +79,10 @@ export function DeltaStatCard({
       tone={delta >= 0 ? "positive" : "negative"}
       note={
         previousDate
-          ? `Порівняння з аналогічним зрізом торік: ${previousDate}.`
+          ? `Порівняння з аналогічним зрізом на: ${previousDate}.`
           : previousYear
             ? `Порівняння з попереднім роком: ${previousYear}.`
-            : "Порівняння з аналогічним зрізом торік."
+            : "Порівняння з аналогічним зрізом."
       }
       helpText={helpText}
     />

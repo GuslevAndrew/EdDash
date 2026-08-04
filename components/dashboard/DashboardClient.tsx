@@ -433,7 +433,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
               year={filters.years.length === 1 ? filters.years[0] : filters.year}
             />
           ) : (
-            <StatCard title="Зміна до аналогічного зрізу" value="" isLoading />
+            <StatCard title="Зміна" value="" isLoading />
           )}
         </section>
       ) : null}
