@@ -1,6 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from "recharts";
 import { LoadingNotice } from "@/components/ui/LoadingNotice";
 import { formatDate, formatNumber } from "@/lib/utils/format";
 
@@ -20,6 +30,16 @@ export type RegionMapStat = {
 export type RegionMapResponse = {
   snapshotDate: string | null;
   regions: RegionMapStat[];
+};
+
+type MapDynamicsPoint = {
+  date: string;
+  institutionsCount: number;
+  studentsCount: number;
+};
+
+type MapDynamicsResponse = {
+  points: MapDynamicsPoint[];
 };
 
 export type MapFilterChip = {
@@ -126,6 +146,12 @@ function parseUkraineSvg(svgText: string): SvgRegion[] {
     .filter((region) => region.id && region.d);
 }
 
+function buildDynamicsQuery(query: string): string {
+  const params = new URLSearchParams(query);
+  ["date", "page", "pageSize", "sort", "direction"].forEach((key) => params.delete(key));
+  return params.toString();
+}
+
 export function InteractiveEducationMap({
   query,
   selectedRegionIds,
@@ -139,9 +165,13 @@ export function InteractiveEducationMap({
 }) {
   const [regions, setRegions] = useState<SvgRegion[]>([]);
   const [data, setData] = useState<RegionMapResponse | null>(null);
+  const [dynamics, setDynamics] = useState<MapDynamicsResponse | null>(null);
+  const [selectedDynamicsDates, setSelectedDynamicsDates] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [dynamicsError, setDynamicsError] = useState("");
   const [mapMetric, setMapMetric] = useState<MapMetric>("institutions");
   const isSelectedMode = selectedRegionIds.length > 0;
+  const dynamicsQuery = useMemo(() => buildDynamicsQuery(query), [query]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -184,6 +214,29 @@ export function InteractiveEducationMap({
     return () => controller.abort();
   }, [onDataChange, query]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setDynamicsError("");
+    setDynamics(null);
+    setSelectedDynamicsDates([]);
+
+    fetch(`/api/institutions/map/dynamics${dynamicsQuery ? `?${dynamicsQuery}` : ""}`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("Map dynamics request failed");
+        return response.json() as Promise<MapDynamicsResponse>;
+      })
+      .then((nextData) => {
+        setDynamics(nextData);
+        setSelectedDynamicsDates(nextData.points.map((point) => point.date));
+      })
+      .catch((mapError) => {
+        if (mapError instanceof DOMException && mapError.name === "AbortError") return;
+        setDynamicsError("Не вдалося завантажити динаміку для EdМапи.");
+      });
+
+    return () => controller.abort();
+  }, [dynamicsQuery]);
+
   const statsByRegion = useMemo(() => {
     const entries = data?.regions.map((region) => [normalizeRegionName(region.regionName), region] as const) ?? [];
     return new Map(entries);
@@ -194,6 +247,26 @@ export function InteractiveEducationMap({
   const mapMetricMaxValue = mapMetric === "students" ? maxStudents : maxInstitutions;
   const totalInstitutions = data?.regions.reduce((sum, region) => sum + region.institutionsCount, 0) ?? 0;
   const totalStudents = data?.regions.reduce((sum, region) => sum + region.studentsCount, 0) ?? 0;
+  const dynamicDateOptions = useMemo(
+    () => (dynamics?.points ?? [])
+      .slice()
+      .sort((first, second) => Date.parse(second.date) - Date.parse(first.date))
+      .map((point) => ({ value: point.date, label: formatDate(point.date) })),
+    [dynamics?.points]
+  );
+  const selectedDynamicsDateSet = useMemo(() => new Set(selectedDynamicsDates), [selectedDynamicsDates]);
+  const dynamicChartData = useMemo(
+    () => (dynamics?.points ?? [])
+      .filter((point) => selectedDynamicsDateSet.has(point.date))
+      .sort((first, second) => Date.parse(first.date) - Date.parse(second.date))
+      .map((point) => ({
+        date: point.date,
+        label: formatDate(point.date),
+        studentsCount: point.studentsCount,
+        institutionsCount: point.institutionsCount
+      })),
+    [dynamics?.points, selectedDynamicsDateSet]
+  );
 
   return (
     <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-soft">
@@ -337,6 +410,188 @@ export function InteractiveEducationMap({
         </span>
         <span>Перша цифра - заклади освіти, друга - контингент.</span>
       </div>
+      <div className="mt-5 border-t border-line pt-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold text-ink">Динаміка EdМапи</h3>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              Графік показує зміну контингенту та кількості закладів освіти за вибраними фільтрами.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3 text-xs text-muted">
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2.5 w-5 rounded-sm bg-amber-500" /> Контингент, ліва шкала
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2.5 w-5 rounded-sm bg-brand-600" /> Заклади, права шкала
+            </span>
+          </div>
+        </div>
+        {dynamicsError ? <p className="mt-4 rounded-md border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">{dynamicsError}</p> : null}
+        {!dynamics ? (
+          <div className="mt-4">
+            <LoadingNotice text="Оновлюю динаміку EdМапи, зачекайте декілька секунд..." />
+          </div>
+        ) : dynamicChartData.length ? (
+          <div className="mt-4 h-96 rounded-lg border border-line bg-slate-50 p-3">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={dynamicChartData} margin={{ left: 8, right: 8, top: 8, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis
+                  yAxisId="students"
+                  orientation="left"
+                  width={92}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => formatNumber(Number(value))}
+                />
+                <YAxis
+                  yAxisId="institutions"
+                  orientation="right"
+                  width={64}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => formatNumber(Number(value))}
+                />
+                <Tooltip formatter={(value: number | string, name) => [formatNumber(Number(value)), name]} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Line
+                  yAxisId="students"
+                  type="monotone"
+                  dataKey="studentsCount"
+                  name="Контингент"
+                  stroke="#f59e0b"
+                  strokeWidth={3}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+                <Line
+                  yAxisId="institutions"
+                  type="monotone"
+                  dataKey="institutionsCount"
+                  name="Заклади освіти"
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-lg border border-dashed border-line bg-slate-50 px-4 py-8 text-center text-sm font-medium text-slate-700">
+            Завантаження даних
+          </div>
+        )}
+        {dynamicDateOptions.length ? (
+          <div className="mt-4">
+            <MapDateMultiSelect
+              options={dynamicDateOptions}
+              selectedValues={selectedDynamicsDates}
+              onChange={setSelectedDynamicsDates}
+            />
+          </div>
+        ) : null}
+      </div>
     </section>
   );
+}
+
+function MapDateMultiSelect({
+  options,
+  selectedValues,
+  onChange
+}: {
+  options: Array<{ value: string; label: string }>;
+  selectedValues: string[];
+  onChange: (values: string[]) => void;
+}) {
+  const detailsRef = useAutoCloseMapDetails();
+  const selectedOptions = options.filter((option) => selectedValues.includes(option.value));
+  const labelText = selectedOptions.length === options.length
+    ? "Усі дати"
+    : selectedOptions.length === 0
+      ? "Обрано дат: 0"
+      : selectedOptions.length <= 2
+        ? selectedOptions.map((option) => option.label).join(", ")
+        : `Обрано дат: ${selectedOptions.length}`;
+
+  function toggleValue(value: string, checked: boolean) {
+    if (checked) {
+      onChange(selectedValues.includes(value) ? selectedValues : [...selectedValues, value]);
+      return;
+    }
+    onChange(selectedValues.filter((item) => item !== value));
+  }
+
+  function toggleAll() {
+    onChange(selectedOptions.length === options.length ? [] : options.map((option) => option.value));
+  }
+
+  return (
+    <div className="relative max-w-sm">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted">Дати</div>
+      <details ref={detailsRef} className="group relative mt-2">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md border border-line bg-white px-3 py-2 text-sm outline-none hover:bg-slate-50 focus:border-brand-500">
+          <span className="truncate">{labelText}</span>
+          <span className="text-xs text-muted group-open:rotate-180">▼</span>
+        </summary>
+        <div className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-md border border-line bg-white p-2 shadow-lg">
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            disabled={!selectedOptions.length}
+            className="mb-2 w-full rounded-md border border-line px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            Скинути
+          </button>
+          <button
+            type="button"
+            onClick={toggleAll}
+            className={`flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm font-medium hover:bg-slate-50 ${
+              selectedOptions.length === options.length ? "bg-brand-50 text-brand-800" : "text-slate-700"
+            }`}
+          >
+            <input
+              type="checkbox"
+              readOnly
+              checked={selectedOptions.length === options.length}
+              className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+            />
+            <span>Усі дати</span>
+          </button>
+          <div className="my-1 border-t border-line" />
+          {options.map((option) => (
+            <label key={option.value} className="flex cursor-pointer items-start gap-2 rounded px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
+              <input
+                type="checkbox"
+                checked={selectedValues.includes(option.value)}
+                onChange={(event) => toggleValue(option.value, event.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              />
+              <span>{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </details>
+    </div>
+  );
+}
+
+function useAutoCloseMapDetails() {
+  const detailsRef = useRef<HTMLDetailsElement | null>(null);
+
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      const details = detailsRef.current;
+      if (!details?.open || !(event.target instanceof Node)) return;
+      if (!details.contains(event.target)) {
+        details.removeAttribute("open");
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, []);
+
+  return detailsRef;
 }
