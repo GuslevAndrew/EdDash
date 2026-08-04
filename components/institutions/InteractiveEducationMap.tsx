@@ -405,7 +405,7 @@ export function InteractiveEducationMap({
     <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-soft">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-base font-semibold text-ink">Динаміка EdМапи</h3>
+            <h3 className="text-base font-semibold text-ink">Показники в динаміці</h3>
             <p className="mt-1 text-sm leading-6 text-muted">
               Графік показує зміну контингенту та кількості закладів освіти за вибраними фільтрами.
             </p>
