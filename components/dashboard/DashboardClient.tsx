@@ -71,6 +71,30 @@ const allDynamicsBreakdownOptions: Array<{ value: DynamicsBreakdownValue; label:
   { value: "studyForms", label: "По формах навчання" }
 ];
 
+const summaryHelpTexts = {
+  total:
+    "Показує загальну кількість осіб у вибраному стані навчання відповідно до застосованих фільтрів. Щоб змінити показник, налаштуйте фільтри та натисніть «Застосувати».",
+  institutions:
+    "Показує кількість закладів освіти, які мають дані за вибраними фільтрами. Якщо змінити регіон, рівень закладу або інші фільтри, кількість оновиться.",
+  specialities:
+    "Показує кількість спеціальностей, представлених у даних за поточними фільтрами. Для деталізації оберіть галузь знань або конкретні спеціальності.",
+  regions:
+    "Показує кількість регіонів, у яких є дані за вибраними фільтрами. Якщо обрати один або кілька регіонів, показник відобразить саме доступний набір.",
+  delta:
+    "Показує зміну до аналогічного зрізу торік або до попереднього року залежно від вибраного стану навчання. Для коректного порівняння має бути доступний відповідний період."
+};
+
+const chartHelpTexts = {
+  institutions:
+    "Блок показує заклади освіти за кількістю осіб у вибраному стані навчання. За замовчуванням видно перші позиції за найбільшим значенням, кнопку «Показати ще» можна використати для розширення списку. Якщо у фільтрі обрати конкретні заклади, вони піднімуться нагору і будуть виділені окремим кольором.",
+  regions:
+    "Блок показує розподіл кількості осіб за регіонами. Обрані регіони не прибирають інші з графіка, а піднімаються нагору та виділяються кольором, щоб можна було порівняти їх із загальною картиною.",
+  fields:
+    "Блок показує дані за галузями знань і спеціальностями. Галузі є основним рівнем, а спеціальності розкривають деталізацію всередині відповідних галузей. Для звуження результату використайте фільтри галузей або спеціальностей.",
+  dynamics:
+    "Блок показує зміну показників у часі. Можна обрати потрібні дати або роки, а також додати окремі лінії за закладами, регіонами, галузями, спеціальностями, освітніми рівнями чи формами навчання."
+};
+
 function getInitialFilters(options: FilterOptions | null): DashboardFilterState {
   return {
     ...emptyFilters,
@@ -411,18 +435,19 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
 
       {showSummaryCards ? (
         <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <StatCard title={totalLabel} value={summary?.totalStudents ?? ""} isLoading={!summary} />
-          <StatCard title="Закладів освіти" value={summary?.institutionsCount ?? ""} isLoading={!summary} />
-          <StatCard title="Спеціальностей" value={summary?.specialitiesCount ?? ""} isLoading={!summary} />
-          <StatCard title="Представлених регіонів" value={summary?.regionsCount ?? ""} isLoading={!summary} />
+          <StatCard title={totalLabel} value={summary?.totalStudents ?? ""} isLoading={!summary} helpText={summaryHelpTexts.total} />
+          <StatCard title="Закладів освіти" value={summary?.institutionsCount ?? ""} isLoading={!summary} helpText={summaryHelpTexts.institutions} />
+          <StatCard title="Спеціальностей" value={summary?.specialitiesCount ?? ""} isLoading={!summary} helpText={summaryHelpTexts.specialities} />
+          <StatCard title="Представлених регіонів" value={summary?.regionsCount ?? ""} isLoading={!summary} helpText={summaryHelpTexts.regions} />
           {summary ? (
             <DeltaStatCard
               delta={summary.previousDelta}
               snapshotDate={filters.snapshotDate}
               year={filters.years.length === 1 ? filters.years[0] : filters.year}
+              helpText={summaryHelpTexts.delta}
             />
           ) : (
-            <StatCard title="Зміна до аналогічного зрізу" value="" isLoading />
+            <StatCard title="Зміна до аналогічного зрізу" value="" isLoading helpText={summaryHelpTexts.delta} />
           )}
         </section>
       ) : null}
@@ -433,6 +458,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
           data={charts.topInstitutions}
           totalData={charts.topInstitutionsTotal}
           selectedNames={selectedInstitutionNames}
+          helpText={chartHelpTexts.institutions}
         />
         <RegionChartCard
           title={regionChartTitle}
@@ -440,12 +466,14 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
           totalLabel={isStudentsDataset ? "Разом по всіх регіонах" : "Разом по обраним регіонам"}
           totalMode={isStudentsDataset ? "all" : "warning"}
           initialVisibleCount={7}
+          helpText={chartHelpTexts.regions}
         />
         <RegionChartCard
           title="Здобувачі за галуззю та спеціальністю"
           data={charts.fields}
           totalLabel="Разом по галузям та спеціальностям"
           childGroupLabel="Спеціальності"
+          helpText={chartHelpTexts.fields}
         />
         <LineChartCard
           title={dynamicsChartTitle}
@@ -458,6 +486,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
           selectedBreakdowns={dynamicBreakdowns}
           onBreakdownToggle={toggleDynamicBreakdown}
           isBreakdownLoading={isDynamicsBreakdownLoading}
+          helpText={chartHelpTexts.dynamics}
         />
       </section>
     </div>

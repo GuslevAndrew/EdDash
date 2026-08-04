@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { formatDate, formatNumber } from "@/lib/utils/format";
 
 export type ChartDatum = {
@@ -36,10 +37,19 @@ function formatSeriesLabel(value: string): string {
   return /^\d{4}$/.test(value) ? value : formatDate(value);
 }
 
-export function BarChartCard({ title, data }: { title: string; data: ChartDatum[] }) {
+function BlockTitle({ title, helpText }: { title: string; helpText?: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <h2 className="text-base font-semibold text-ink">{title}</h2>
+      {helpText ? <InfoTooltip text={helpText} /> : null}
+    </div>
+  );
+}
+
+export function BarChartCard({ title, data, helpText }: { title: string; data: ChartDatum[]; helpText?: string }) {
   return (
     <article className="rounded-lg border border-line bg-white p-5 shadow-soft">
-      <h2 className="text-base font-semibold text-ink">{title}</h2>
+      <BlockTitle title={title} helpText={helpText} />
       {data.length ? (
         <div className="mt-4 h-80">
           <ResponsiveContainer width="100%" height="100%">
@@ -63,12 +73,14 @@ export function ExpandableInstitutionChartCard({
   title,
   data,
   totalData,
-  selectedNames = []
+  selectedNames = [],
+  helpText
 }: {
   title: string;
   data: ChartDatum[];
   totalData?: ChartDatum[];
   selectedNames?: string[];
+  helpText?: string;
 }) {
   const [visibleCount, setVisibleCount] = useState(initialVisibleBars);
   const totalSourceData = totalData?.length ? totalData : data;
@@ -122,7 +134,7 @@ export function ExpandableInstitutionChartCard({
     <article className="rounded-lg border border-line bg-white p-5 shadow-soft xl:col-span-2">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-ink">{title}</h2>
+          <BlockTitle title={title} helpText={helpText} />
           {data.length || selectedData.length ? (
             <p className="mt-1 text-sm text-muted">
               Показано {formatNumber(visibleData.length + selectedData.length)} з {formatNumber(data.length)} закладів за поточними фільтрами.
@@ -165,7 +177,8 @@ export function RegionChartCard({
   totalLabel = "Разом по всіх закладах",
   childGroupLabel = "ЗВО",
   initialVisibleCount,
-  totalMode = "all"
+  totalMode = "all",
+  helpText
 }: {
   title: string;
   data: ChartDatum[];
@@ -173,6 +186,7 @@ export function RegionChartCard({
   childGroupLabel?: string;
   initialVisibleCount?: number;
   totalMode?: "all" | "warning";
+  helpText?: string;
 }) {
   const [visibleCount, setVisibleCount] = useState(initialVisibleCount ?? data.length);
   const totalItem = useMemo<ChartDatum | null>(() => {
@@ -220,7 +234,7 @@ export function RegionChartCard({
 
   return (
     <article className="rounded-lg border border-line bg-white p-5 shadow-soft xl:col-span-2">
-      <h2 className="text-base font-semibold text-ink">{title}</h2>
+      <BlockTitle title={title} helpText={helpText} />
       {data.length ? (
         <div className="mt-4 space-y-2.5">
           {totalItem ? <RegionBar item={totalItem} maxValue={totalItem.value || maxValue} totalItem={totalItem} childGroupLabel={childGroupLabel} isTotal /> : null}
@@ -443,7 +457,8 @@ export function LineChartCard({
   breakdownOptions = [],
   selectedBreakdowns = [],
   onBreakdownToggle,
-  isBreakdownLoading = false
+  isBreakdownLoading = false,
+  helpText
 }: {
   title: string;
   data: ChartDatum[];
@@ -455,6 +470,7 @@ export function LineChartCard({
   selectedBreakdowns?: DynamicsBreakdownValue[];
   onBreakdownToggle?: (value: DynamicsBreakdownValue, checked: boolean) => void;
   isBreakdownLoading?: boolean;
+  helpText?: string;
 }) {
   const [hoveredLineKey, setHoveredLineKey] = useState<string | null>(null);
   const prepared = data.map((item) => ({ ...item, label: /^\d{4}$/.test(item.name) ? item.name : formatDate(item.name) }));
@@ -507,7 +523,7 @@ export function LineChartCard({
   ];
   return (
     <article className="rounded-lg border border-line bg-white p-5 shadow-soft xl:col-span-2">
-      <h2 className="text-base font-semibold text-ink">{title}</h2>
+      <BlockTitle title={title} helpText={helpText} />
       {prepared.length ? (
         <div className={`mt-4 ${chartHeight}`}>
           <ResponsiveContainer width="100%" height="100%">

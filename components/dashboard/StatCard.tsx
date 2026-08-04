@@ -1,24 +1,30 @@
 import { formatDate, formatNumber, formatSigned } from "@/lib/utils/format";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 export function StatCard({
   title,
   value,
   note,
   tone = "neutral",
-  isLoading = false
+  isLoading = false,
+  helpText
 }: {
   title: string;
   value: number | string;
   note?: string;
   tone?: "neutral" | "positive" | "negative";
   isLoading?: boolean;
+  helpText?: string;
 }) {
   const color = tone === "positive" ? "text-emerald-700" : tone === "negative" ? "text-rose-700" : "text-ink";
   const displayValue = typeof value === "number" ? formatNumber(value) : value;
 
   return (
     <div className="rounded-lg border border-line bg-white p-5 shadow-soft">
-      <p className="text-sm font-medium text-muted">{title}</p>
+      <div className="flex items-start gap-2">
+        <p className="text-sm font-medium text-muted">{title}</p>
+        {helpText ? <InfoTooltip text={helpText} /> : null}
+      </div>
       {isLoading ? (
         <div className="mt-3 h-7 w-28 animate-pulse rounded bg-slate-100" />
       ) : (
@@ -34,7 +40,17 @@ function getSameDatePreviousYear(value: string): Date {
   return new Date(Date.UTC(date.getUTCFullYear() - 1, date.getUTCMonth(), date.getUTCDate()));
 }
 
-export function DeltaStatCard({ delta, snapshotDate, year }: { delta: number | null; snapshotDate?: string; year?: string }) {
+export function DeltaStatCard({
+  delta,
+  snapshotDate,
+  year,
+  helpText
+}: {
+  delta: number | null;
+  snapshotDate?: string;
+  year?: string;
+  helpText?: string;
+}) {
   const title = "Зміна до аналогічного зрізу";
   const previousDate = snapshotDate ? formatDate(getSameDatePreviousYear(snapshotDate)) : null;
   const previousYear = year ? String(Number(year) - 1) : null;
@@ -51,6 +67,7 @@ export function DeltaStatCard({ delta, snapshotDate, year }: { delta: number | n
               ? `Для поточних фільтрів немає даних за попередній рік: ${previousYear}.`
               : "Для поточних фільтрів немає даних на аналогічний зріз торік."
         }
+        helpText={helpText}
       />
     );
   }
@@ -67,6 +84,7 @@ export function DeltaStatCard({ delta, snapshotDate, year }: { delta: number | n
             ? `Порівняння з попереднім роком: ${previousYear}.`
             : "Порівняння з аналогічним зрізом торік."
       }
+      helpText={helpText}
     />
   );
 }
