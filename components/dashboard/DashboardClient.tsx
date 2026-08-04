@@ -143,7 +143,12 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
       : filters.datasetType === "graduates"
       ? "Закінчили навчання за галуззю та спеціальністю"
       : "Здобувачі за галуззю та спеціальністю";
-  const dynamicsChartTitle = filters.datasetType === "graduates" ? "Випускники в динаміці" : "Контингент в динаміці";
+  const dynamicsChartTitle =
+    filters.datasetType === "entrants"
+      ? "Зараховані в динаміці"
+      : filters.datasetType === "graduates"
+        ? "Випускники в динаміці"
+        : "Контингент в динаміці";
   const latestDateFilters = useMemo<DashboardFilterState>(
     () => ({
       ...emptyFilters,
