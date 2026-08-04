@@ -7,6 +7,7 @@ import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical
 const cacheHeaders = {
   "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400"
 };
+const HIDDEN_FILTER_REGION_NAMES = new Set(["Автономна Республіка Крим"]);
 
 function getNumberParams(searchParams: URLSearchParams, key: string): number[] {
   return searchParams
@@ -92,8 +93,10 @@ export async function GET(request: Request) {
     ).values()
   ].sort((first, second) => first.label.localeCompare(second.label, "uk"));
 
+  const visibleRegions = regions.filter((region) => !HIDDEN_FILTER_REGION_NAMES.has(region.name));
+
   return NextResponse.json({
-    regions,
+    regions: visibleRegions,
     selectedInstitutions,
     totalByLevel: totalByLevel.map((item) => ({
       institutionTypeCode: item.institutionTypeCode,

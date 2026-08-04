@@ -31,6 +31,7 @@ type SummaryCounts = {
 const MIN_COMPLETE_SNAPSHOT_ROWS = 10_000;
 const SHORT_SERVER_CACHE_TTL_MS = 10 * 60 * 1000;
 let completeSnapshotDatesCache: { expiresAt: number; dates: Date[] } | null = null;
+const HIDDEN_FILTER_REGION_NAMES = new Set(["Автономна Республіка Крим"]);
 
 function formatFieldName(fieldCode?: string | null, fieldName?: string | null): string {
   const code = fieldCode?.trim();
@@ -111,6 +112,7 @@ export async function getFilterOptions() {
   const dates = dateRows
     .filter((item) => (typeof item._count === "object" ? item._count._all ?? 0 : 0) >= MIN_COMPLETE_SNAPSHOT_ROWS)
     .map((item) => item.snapshotDate);
+  const visibleRegions = regions.filter((region) => !HIDDEN_FILTER_REGION_NAMES.has(region.name));
   return {
     dates: dates.map((date) => date.toISOString()),
     datesWithStudyForms: dates.map((date) => date.toISOString()),
@@ -133,8 +135,8 @@ export async function getFilterOptions() {
     ],
     fields: specialityCatalogSource.fields,
     regions: [
-      ...regions.filter((region) => region.name === "м. Київ"),
-      ...regions.filter((region) => region.name !== "м. Київ").sort((first, second) => first.name.localeCompare(second.name, "uk"))
+      ...visibleRegions.filter((region) => region.name === "м. Київ"),
+      ...visibleRegions.filter((region) => region.name !== "м. Київ").sort((first, second) => first.name.localeCompare(second.name, "uk"))
     ],
     institutions,
     specialities: specialities
