@@ -239,21 +239,26 @@ export function InteractiveEducationMap({
     setDynamics(null);
     setSelectedDynamicsDates([]);
 
-    fetch(`/api/institutions/map/dynamics${dynamicsQuery ? `?${dynamicsQuery}` : ""}`, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("Map dynamics request failed");
-        return response.json() as Promise<MapDynamicsResponse>;
-      })
-      .then((nextData) => {
-        setDynamics(nextData);
-        setSelectedDynamicsDates(nextData.points.map((point) => point.date));
-      })
-      .catch((mapError) => {
-        if (mapError instanceof DOMException && mapError.name === "AbortError") return;
-        setDynamicsError("Не вдалося завантажити динаміку для EdМапи.");
-      });
+    const timeoutId = window.setTimeout(() => {
+      fetch(`/api/institutions/map/dynamics${dynamicsQuery ? `?${dynamicsQuery}` : ""}`, { signal: controller.signal })
+        .then((response) => {
+          if (!response.ok) throw new Error("Map dynamics request failed");
+          return response.json() as Promise<MapDynamicsResponse>;
+        })
+        .then((nextData) => {
+          setDynamics(nextData);
+          setSelectedDynamicsDates(nextData.points.map((point) => point.date));
+        })
+        .catch((mapError) => {
+          if (mapError instanceof DOMException && mapError.name === "AbortError") return;
+          setDynamicsError("Не вдалося завантажити динаміку для EdМапи.");
+        });
+    }, 600);
 
-    return () => controller.abort();
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [dynamicsQuery]);
 
   const statsByRegion = useMemo(() => {

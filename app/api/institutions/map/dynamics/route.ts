@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { readDashboardApiCache, writeDashboardApiCache } from "@/lib/dashboard/api-cache";
 import { SUPPORTED_INSTITUTION_TYPE_CODES } from "@/lib/edbo/constants";
 import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical";
 
@@ -39,9 +40,39 @@ function parseDynamicsQuery(params: URLSearchParams) {
   });
 }
 
+type ParsedDynamicsQuery = ReturnType<typeof parseDynamicsQuery>;
+
+function sortNumbers(values: number[]) {
+  return [...values].sort((first, second) => first - second);
+}
+
+function sortStrings(values: string[]) {
+  return [...values].sort((first, second) => first.localeCompare(second, "uk", { numeric: true }));
+}
+
+function getDynamicsCacheKey(parsed: ParsedDynamicsQuery): string {
+  return JSON.stringify({
+    scope: "institutionsMapDynamics",
+    version: 1,
+    level: sortStrings(parsed.level),
+    region: sortNumbers(parsed.region),
+    institution: sortNumbers(parsed.institution),
+    field: sortStrings(parsed.field),
+    speciality: sortStrings(parsed.speciality),
+    educationLevel: sortStrings(parsed.educationLevel),
+    entryBase: sortNumbers(parsed.entryBase),
+    studyForm: sortNumbers(parsed.studyForm),
+    showBlocked: parsed.showBlocked === "1"
+  });
+}
+
 export async function GET(request: Request) {
   try {
     const parsed = parseDynamicsQuery(new URL(request.url).searchParams);
+    const cacheKey = getDynamicsCacheKey(parsed);
+    const cached = await readDashboardApiCache(cacheKey);
+    if (cached) return NextResponse.json(cached, { headers: cacheHeaders });
+
     const filteredInstitutionTypeCodes = parsed.level.length ? parsed.level : [...SUPPORTED_INSTITUTION_TYPE_CODES];
     const showBlocked = parsed.showBlocked === "1";
     const educationLevels = parsed.educationLevel.length
@@ -85,13 +116,16 @@ export async function GET(request: Request) {
       totalsByDate.set(key, current);
     }
 
-    return NextResponse.json({
+    const payload = {
       points: [...totalsByDate.entries()].map(([date, totals]) => ({
         date,
         institutionsCount: totals.institutionsCount,
         studentsCount: totals.studentsCount
       }))
-    }, { headers: cacheHeaders });
+    };
+
+    await writeDashboardApiCache("institutionsMapDynamics", cacheKey, payload);
+    return NextResponse.json(payload, { headers: cacheHeaders });
   } catch (error) {
     console.error("institutions map dynamics api error", error);
     return NextResponse.json({ message: "Не вдалося отримати динаміку для EdМапи." }, { status: 400 });

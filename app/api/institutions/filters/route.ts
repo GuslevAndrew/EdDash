@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { readDashboardApiCache, writeDashboardApiCache } from "@/lib/dashboard/api-cache";
 import { SUPPORTED_INSTITUTION_TYPE_CODES } from "@/lib/edbo/constants";
 import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical";
 
@@ -16,10 +17,22 @@ function getNumberParams(searchParams: URLSearchParams, key: string): number[] {
     .filter((value) => Number.isFinite(value) && value > 0);
 }
 
+function getFiltersCacheKey(selectedInstitutionIds: number[], showBlocked: boolean): string {
+  return JSON.stringify({
+    scope: "institutionsFilters",
+    version: 1,
+    selectedInstitutionIds: [...selectedInstitutionIds].sort((first, second) => first - second),
+    showBlocked
+  });
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const selectedInstitutionIds = getNumberParams(searchParams, "institution");
   const showBlocked = searchParams.get("showBlocked") === "1";
+  const cacheKey = getFiltersCacheKey(selectedInstitutionIds, showBlocked);
+  const cached = await readDashboardApiCache(cacheKey);
+  if (cached) return NextResponse.json(cached, { headers: cacheHeaders });
 
   const statsWhere: Prisma.InstitutionWhereInput = {
     institutionTypeCode: { in: [...SUPPORTED_INSTITUTION_TYPE_CODES] },
@@ -95,7 +108,7 @@ export async function GET(request: Request) {
 
   const visibleRegions = regions.filter((region) => !HIDDEN_FILTER_REGION_NAMES.has(region.name));
 
-  return NextResponse.json({
+  const payload = {
     regions: visibleRegions,
     selectedInstitutions,
     totalByLevel: totalByLevel.map((item) => ({
@@ -125,5 +138,8 @@ export async function GET(request: Request) {
       value: String(studyForm.id),
       label: studyForm.name
     }))
-  }, { headers: cacheHeaders });
+  };
+
+  await writeDashboardApiCache("institutionsFilters", cacheKey, payload);
+  return NextResponse.json(payload, { headers: cacheHeaders });
 }

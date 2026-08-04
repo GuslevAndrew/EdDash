@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import type { DashboardFiltersInput } from "@/lib/edbo/schemas";
 
-export type DashboardCacheScope = "filters" | "summary" | "charts" | "dynamics";
+export type DashboardCacheScope = "filters" | "summary" | "charts" | "dynamics" | "institutionsFilters" | "institutionsMapDynamics";
 
 export const FILTER_OPTIONS_CACHE_KEY = JSON.stringify({ scope: "filters", version: 1 });
 
