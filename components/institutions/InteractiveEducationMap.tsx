@@ -299,7 +299,7 @@ export function InteractiveEducationMap({
 
   return (
     <>
-    <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-soft">
+    <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-soft ring-1 ring-white/70">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <SectionTitle title="Інтерактивна карта освіти" helpText={mapHelpText} size="lg" />
@@ -448,7 +448,7 @@ export function InteractiveEducationMap({
       </div>
     </section>
 
-    <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-soft">
+    <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-soft ring-1 ring-white/70">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <SectionTitle title="Показники в динаміці" helpText={dynamicsHelpText} />

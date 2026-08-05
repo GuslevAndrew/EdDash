@@ -128,7 +128,7 @@ export function InstitutionsTable({
   const canShowMore = Boolean(data && data.pageSize < data.total && data.pageSize < maxPageSize);
 
   return (
-    <section className="rounded-lg border border-line bg-white p-5 shadow-soft">
+    <section className="rounded-lg border border-line bg-white p-5 shadow-soft ring-1 ring-white/70">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -148,7 +148,7 @@ export function InstitutionsTable({
       <div className="mt-5 overflow-x-auto">
         <table className="min-w-[1220px] w-full border-collapse text-left text-sm">
           <thead>
-            <tr className="border-b border-line bg-slate-50">
+            <tr className="sticky top-0 z-10 border-b border-line bg-slate-50/95 backdrop-blur">
               <th className="w-10 px-2 py-3 text-center font-semibold text-slate-700">№</th>
               <SortableHeader label="Заклад освіти" sort="institution" currentSort={sort} currentDirection={direction} onSort={changeSort} />
               <SortableHeader label="Головний заклад" sort="parent" currentSort={sort} currentDirection={direction} onSort={changeSort} />
@@ -204,7 +204,7 @@ function InstitutionRow({ institution }: { institution: InstitutionTableRow }) {
   const canLinkToParent = !institution.website && Boolean(parentHref);
 
   return (
-    <tr className={`border-b ${isBlocked ? "border-rose-100 bg-rose-50" : "border-slate-100"}`}>
+    <tr className={`border-b transition-colors ${isBlocked ? "border-rose-100 bg-rose-50 hover:bg-rose-100/70" : "border-slate-100 hover:bg-brand-50/40"}`}>
       <td className="px-2 py-3 text-center align-top text-sm font-medium text-slate-500">{formatNumber(institution.rowNumber)}</td>
       <td className="px-3 py-3 align-top">
         <div className="max-w-sm">

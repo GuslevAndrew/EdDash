@@ -20,7 +20,7 @@ export function StatCard({
   const displayValue = typeof value === "number" ? formatNumber(value) : value;
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-line bg-white p-5 shadow-soft">
+    <div className="relative min-h-36 overflow-hidden rounded-lg border border-line bg-white p-5 shadow-soft ring-1 ring-white/70 transition duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-dropdown">
       <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-brand-600 via-emerald-500 to-transparent" />
       <div className="flex items-start gap-2">
         <p className="text-sm font-medium text-muted">{title}</p>

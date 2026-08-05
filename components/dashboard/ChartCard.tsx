@@ -50,7 +50,7 @@ function BlockTitle({ title, helpText }: { title: string; helpText?: string }) {
 
 export function BarChartCard({ title, data, helpText }: { title: string; data: ChartDatum[]; helpText?: string }) {
   return (
-    <article className="rounded-lg border border-line bg-white p-5 shadow-soft">
+    <article className="rounded-lg border border-line bg-white p-5 shadow-soft ring-1 ring-white/70">
       <BlockTitle title={title} helpText={helpText} />
       {data.length ? (
         <div className="mt-4 h-80">
@@ -133,7 +133,7 @@ export function ExpandableInstitutionChartCard({
   }, [data, selectedNames]);
 
   return (
-    <article className="rounded-lg border border-line bg-white p-5 shadow-soft xl:col-span-2">
+    <article className="rounded-lg border border-line bg-white p-5 shadow-soft ring-1 ring-white/70 xl:col-span-2">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <BlockTitle title={title} helpText={helpText} />
@@ -235,7 +235,7 @@ export function RegionChartCard({
   }, [data, initialVisibleCount]);
 
   return (
-    <article className="rounded-lg border border-line bg-white p-5 shadow-soft xl:col-span-2">
+    <article className="rounded-lg border border-line bg-white p-5 shadow-soft ring-1 ring-white/70 xl:col-span-2">
       <BlockTitle title={title} helpText={helpText} />
       {data.length ? (
         <div className="mt-5 space-y-3">
@@ -524,7 +524,7 @@ export function LineChartCard({
     "#3730a3"
   ];
   return (
-    <article className="rounded-lg border border-line bg-white p-5 shadow-soft xl:col-span-2">
+    <article className="rounded-lg border border-line bg-white p-5 shadow-soft ring-1 ring-white/70 xl:col-span-2">
       <BlockTitle title={title} helpText={helpText} />
       {prepared.length ? (
         <div className={`mt-4 ${chartHeight}`}>
