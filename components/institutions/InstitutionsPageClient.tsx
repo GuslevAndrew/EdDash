@@ -142,6 +142,7 @@ export function InstitutionsPageClient() {
   const [isFiltersLoading, setIsFiltersLoading] = useState(true);
   const [filtersError, setFiltersError] = useState("");
   const [mapSummary, setMapSummary] = useState<RegionMapResponse | null>(null);
+  const [areMobileFiltersOpen, setAreMobileFiltersOpen] = useState(false);
   const filtersQuery = useMemo(() => {
     const params = new URLSearchParams();
     selectedInstitutionIds.forEach((id) => params.append("institution", String(id)));
@@ -312,12 +313,16 @@ export function InstitutionsPageClient() {
       </section>
 
       <section className="mb-6 rounded-lg border border-line bg-white/95 p-4 shadow-soft ring-1 ring-white/70 sm:p-5">
-        <details className="group">
-          <summary className="flex cursor-pointer list-none items-center justify-between rounded-md border border-brand-100 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-800 md:hidden">
-            <span>Фільтри</span>
-            <span className="text-xs text-brand-700 transition group-open:rotate-180" aria-hidden="true">▼</span>
-          </summary>
-          <div className="hidden pt-4 group-open:block md:block md:pt-0">
+        <button
+          type="button"
+          onClick={() => setAreMobileFiltersOpen((isOpen) => !isOpen)}
+          className="flex w-full items-center justify-between rounded-md border border-brand-100 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-800 md:hidden"
+          aria-expanded={areMobileFiltersOpen}
+        >
+          <span>Фільтри</span>
+          <span className={`text-xs text-brand-700 transition ${areMobileFiltersOpen ? "rotate-180" : ""}`} aria-hidden="true">▼</span>
+        </button>
+        <div className={`${areMobileFiltersOpen ? "block" : "hidden"} pt-4 md:block md:pt-0`}>
             {filtersError ? <p className="mb-4 rounded-md border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">{filtersError}</p> : null}
             {filters ? (
               <form key={queryString} className="grid gap-5" action="/institutions">
@@ -450,8 +455,7 @@ export function InstitutionsPageClient() {
             ) : (
               <FilterSkeleton />
             )}
-          </div>
-        </details>
+        </div>
       </section>
 
       {isFiltersLoading ? (

@@ -85,6 +85,7 @@ export function DashboardFilters({
   onReset: (currentDraft: DashboardFilterState) => void;
 }) {
   const filtersRef = useRef<HTMLElement | null>(null);
+  const [areMobileFiltersOpen, setAreMobileFiltersOpen] = useState(false);
   const dateOptions = useMemo<Option[]>(
     () => options?.dates.map((date) => ({ value: date, label: formatDate(date) })) ?? [],
     [options?.dates]
@@ -213,12 +214,16 @@ export function DashboardFilters({
 
   return (
     <section ref={filtersRef} className="rounded-lg border border-line bg-white/95 p-4 shadow-soft ring-1 ring-white/70 sm:p-5">
-      <details className="group">
-        <summary className="flex cursor-pointer list-none items-center justify-between rounded-md border border-brand-100 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-800 md:hidden">
-          <span>Фільтри</span>
-          <span className="text-xs text-brand-700 transition group-open:rotate-180">▼</span>
-        </summary>
-        <div className="hidden pt-4 group-open:block md:block md:pt-0">
+      <button
+        type="button"
+        onClick={() => setAreMobileFiltersOpen((isOpen) => !isOpen)}
+        className="flex w-full items-center justify-between rounded-md border border-brand-100 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-800 md:hidden"
+        aria-expanded={areMobileFiltersOpen}
+      >
+        <span>Фільтри</span>
+        <span className={`text-xs text-brand-700 transition ${areMobileFiltersOpen ? "rotate-180" : ""}`} aria-hidden="true">▼</span>
+      </button>
+      <div className={`${areMobileFiltersOpen ? "block" : "hidden"} pt-4 md:block md:pt-0`}>
       <div className="grid gap-5 md:grid-cols-2">
         <SearchableMultiSelect
           label="Рівень закладу освіти"
@@ -376,8 +381,7 @@ export function DashboardFilters({
         «магістр», а записи з рівнями «молодший бакалавр» і «молодший спеціаліст» — до категорії «фаховий молодший
         бакалавр».
       </p>
-        </div>
-      </details>
+      </div>
     </section>
   );
 }
