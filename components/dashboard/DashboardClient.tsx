@@ -82,6 +82,30 @@ const chartHelpTexts = {
     "Блок показує зміну показників у часі. Можна обрати потрібні дати або роки, а також додати окремі лінії за закладами, регіонами, галузями, спеціальностями, освітніми рівнями чи формами навчання."
 };
 
+const chartHelpTextsByDataset: Record<DashboardFilterState["datasetType"], typeof chartHelpTexts> = {
+  students: chartHelpTexts,
+  entrants: {
+    institutions:
+      "У цьому блоці показано заклади освіти з найбільшою кількістю зарахованих осіб за вибраними фільтрами. Натисніть «Показати ще», щоб розширити список. Якщо ви виберете конкретні заклади у фільтрах, вони з’являться на початку списку й будуть виділені окремим кольором. Для порівняння динаміки можна додати кілька років.",
+    regions:
+      "У цьому блоці показано розподіл кількості зарахованих осіб за регіонами. Вибрані регіони піднімаються вгору списку та виділяються окремим кольором, щоб їх було зручно порівняти із загальною картиною. Якщо вибрано один або кілька закладів освіти, вони відображаються всередині відповідного регіону з абсолютним значенням і часткою від регіонального показника у відсотках.",
+    fields:
+      "У цьому блоці показано дані про зарахованих осіб за галузями знань і спеціальностями. Галузі показують розподіл від загального показника, а спеціальності — деталізацію всередині кожної галузі з часткою у відсотках від цієї галузі. Для точнішого перегляду скористайтеся фільтрами за галузями або спеціальностями.",
+    dynamics:
+      "Блок показує зміну кількості зарахованих осіб у часі. Можна обрати потрібні роки, а також додати окремі лінії за закладами, регіонами, галузями, спеціальностями або освітніми рівнями."
+  },
+  graduates: {
+    institutions:
+      "У цьому блоці показано заклади освіти з найбільшою кількістю осіб, які завершили навчання, за вибраними фільтрами. Натисніть «Показати ще», щоб розширити список. Якщо ви виберете конкретні заклади у фільтрах, вони з’являться на початку списку й будуть виділені окремим кольором. Для порівняння динаміки можна додати кілька років.",
+    regions:
+      "У цьому блоці показано розподіл кількості осіб, які завершили навчання, за регіонами. Вибрані регіони піднімаються вгору списку та виділяються окремим кольором, щоб їх було зручно порівняти із загальною картиною. Якщо вибрано один або кілька закладів освіти, вони відображаються всередині відповідного регіону з абсолютним значенням і часткою від регіонального показника у відсотках.",
+    fields:
+      "У цьому блоці показано дані про осіб, які завершили навчання, за галузями знань і спеціальностями. Галузі показують розподіл від загального показника, а спеціальності — деталізацію всередині кожної галузі з часткою у відсотках від цієї галузі. Для точнішого перегляду скористайтеся фільтрами за галузями або спеціальностями.",
+    dynamics:
+      "Блок показує зміну кількості випускників у часі. Можна обрати потрібні роки, а також додати окремі лінії за закладами, регіонами, галузями, спеціальностями або освітніми рівнями."
+  }
+};
+
 function getInitialFilters(options: FilterOptions | null): DashboardFilterState {
   return {
     ...emptyFilters,
@@ -149,6 +173,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
       : filters.datasetType === "graduates"
         ? "Випускники в динаміці"
         : "Контингент в динаміці";
+  const currentChartHelpTexts = chartHelpTextsByDataset[filters.datasetType];
   const latestDateFilters = useMemo<DashboardFilterState>(
     () => ({
       ...emptyFilters,
@@ -467,7 +492,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
           data={charts.topInstitutions}
           totalData={charts.topInstitutionsTotal}
           selectedNames={selectedInstitutionNames}
-          helpText={chartHelpTexts.institutions}
+          helpText={currentChartHelpTexts.institutions}
         />
         <RegionChartCard
           title={regionChartTitle}
@@ -475,14 +500,14 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
           totalLabel={isStudentsDataset ? "Разом по всіх регіонах" : "Разом по обраним регіонам"}
           totalMode={isStudentsDataset ? "all" : "warning"}
           initialVisibleCount={7}
-          helpText={chartHelpTexts.regions}
+          helpText={currentChartHelpTexts.regions}
         />
         <RegionChartCard
           title={fieldChartTitle}
           data={charts.fields}
           totalLabel="Разом по галузям та спеціальностям"
           childGroupLabel="Спеціальності"
-          helpText={chartHelpTexts.fields}
+          helpText={currentChartHelpTexts.fields}
         />
         <LineChartCard
           title={dynamicsChartTitle}
@@ -495,7 +520,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
           selectedBreakdowns={dynamicBreakdowns}
           onBreakdownToggle={toggleDynamicBreakdown}
           isBreakdownLoading={isDynamicsLoading || isDynamicsBreakdownLoading}
-          helpText={chartHelpTexts.dynamics}
+          helpText={currentChartHelpTexts.dynamics}
         />
       </section>
     </div>
