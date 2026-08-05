@@ -145,7 +145,24 @@ export function InstitutionsTable({
         </div>
       </div>
 
-      <div className="mt-5 overflow-x-auto">
+      <div className="mt-5 space-y-3 md:hidden">
+        {isLoading ? <MobileLoadingCards /> : null}
+        {error && !isLoading ? (
+          <p className="rounded-md border border-rose-100 bg-rose-50 px-3 py-8 text-center text-sm text-rose-700">
+            {error}
+          </p>
+        ) : null}
+        {!isLoading && !error && data?.rows.map((institution) => (
+          <InstitutionMobileCard key={institution.id} institution={institution} />
+        ))}
+        {!isLoading && !error && data && !data.rows.length ? (
+          <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-8 text-center text-sm text-muted">
+            Заклади не знайдено. Змініть фільтри або оновіть довідник закладів.
+          </p>
+        ) : null}
+      </div>
+
+      <div className="mt-5 hidden overflow-x-auto md:block">
         <table className="min-w-[1220px] w-full border-collapse text-left text-sm">
           <thead>
             <tr className="sticky top-0 z-10 border-b border-line bg-slate-50/95 backdrop-blur">
@@ -195,6 +212,78 @@ export function InstitutionsTable({
         ) : null}
       </div>
     </section>
+  );
+}
+
+function InstitutionMobileCard({ institution }: { institution: InstitutionTableRow }) {
+  const isBlocked = Boolean(institution.blockedAt);
+  const parentHref = institution.parent?.website && !institution.parent.blockedAt ? institution.parent.website : null;
+  const canLinkToParent = !institution.website && Boolean(parentHref);
+
+  return (
+    <article className={`rounded-lg border p-4 shadow-sm ${isBlocked ? "border-rose-100 bg-rose-50" : "border-line bg-white"}`}>
+      <div className="flex items-start gap-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand-50 text-sm font-bold text-brand-700">
+          {formatNumber(institution.rowNumber)}
+        </span>
+        <div className="min-w-0 flex-1">
+          {institution.website && !isBlocked ? (
+            <a className="font-semibold leading-5 text-brand-700 hover:text-brand-800" href={institution.website}>
+              {institution.name}
+            </a>
+          ) : (
+            <h3 className={`font-semibold leading-5 ${isBlocked ? "text-rose-800" : "text-ink"}`}>{institution.name}</h3>
+          )}
+          {institution.shortName ? <p className="mt-1 text-xs text-slate-500">{institution.shortName}</p> : null}
+          {isBlocked ? (
+            <p className="mt-1 text-xs font-semibold text-rose-700">
+              Заблоковано в ЄДЕБО: {institution.blockedAt}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      <dl className="mt-4 grid gap-3 text-sm">
+        <MobileCardRow label="Регіон" value={displayLocation(institution.region, institution.settlement)} />
+        <MobileCardRow label="Контингент" value={institution.students === null ? "—" : formatNumber(institution.students)} strong />
+        <MobileCardRow label="Рік заснування" value={institution.foundationYear || "—"} />
+        <MobileCardRow label="Форма власності" value={institution.ownership || "—"} />
+        <div>
+          <dt className="text-xs font-semibold uppercase text-slate-500">Головний заклад</dt>
+          <dd className="mt-1 text-slate-700">
+            {institution.parent ? (
+              canLinkToParent ? (
+                <a className="font-medium text-brand-700 hover:text-brand-800" href={parentHref as string}>
+                  {institution.parent.name}
+                </a>
+              ) : (
+                institution.parent.name
+              )
+            ) : (
+              "—"
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase text-slate-500">Контакти</dt>
+          <dd className="mt-1 space-y-1 text-slate-700">
+            {institution.address ? <p>{institution.address}</p> : null}
+            {institution.phone ? <p>{institution.phone}</p> : null}
+            {institution.email ? <a className="block text-brand-700 hover:text-brand-800" href={`mailto:${institution.email}`}>{institution.email}</a> : null}
+            {!institution.address && !institution.phone && !institution.email ? <span>—</span> : null}
+          </dd>
+        </div>
+      </dl>
+    </article>
+  );
+}
+
+function MobileCardRow({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
+      <dt className="text-xs font-semibold uppercase text-slate-500">{label}</dt>
+      <dd className={`text-right text-slate-700 ${strong ? "font-bold text-ink" : ""}`}>{value}</dd>
+    </div>
   );
 }
 
@@ -263,6 +352,24 @@ function LoadingRows() {
             <div className="h-6 animate-pulse rounded bg-slate-100" />
           </td>
         </tr>
+      ))}
+    </>
+  );
+}
+
+function MobileLoadingCards() {
+  return (
+    <>
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div key={index} className="rounded-lg border border-line bg-white p-4 shadow-sm">
+          <div className="h-4 w-3/4 animate-pulse rounded bg-slate-100" />
+          <div className="mt-3 h-3 w-1/2 animate-pulse rounded bg-slate-100" />
+          <div className="mt-4 grid gap-2">
+            <div className="h-3 animate-pulse rounded bg-slate-100" />
+            <div className="h-3 animate-pulse rounded bg-slate-100" />
+            <div className="h-3 w-2/3 animate-pulse rounded bg-slate-100" />
+          </div>
+        </div>
       ))}
     </>
   );

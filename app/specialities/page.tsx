@@ -29,7 +29,7 @@ export default function SpecialitiesPage() {
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <section className="mb-6 rounded-lg border border-line bg-white p-6 shadow-soft">
           <p className="text-sm font-semibold uppercase tracking-wide text-brand-700">Інформація для вступників</p>
-          <h1 className="mt-3 text-3xl font-bold text-ink">Галузі знань і спеціальності</h1>
+          <h1 className="mt-3 text-2xl font-bold text-ink sm:text-3xl">Галузі знань і спеціальності</h1>
           <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-600">
             Це довідкова таблиця чинного переліку галузей знань і спеціальностей, за якими здійснюється
             підготовка здобувачів вищої та фахової передвищої освіти. Вона допомагає швидко побачити,
@@ -85,7 +85,36 @@ export default function SpecialitiesPage() {
             <p className="text-sm text-muted">Позначка “+” означає, що підготовка передбачена на відповідному рівні.</p>
           </div>
 
-          <div className="mt-5 max-h-[75vh] overflow-auto">
+          <div className="mt-5 space-y-4 md:hidden">
+            {fields.map((field) => {
+              const rows = specialities.filter((item) => item.fieldCode === field.code);
+
+              return (
+                <section key={field.code} id={`field-${field.code}`} className="rounded-lg border border-line bg-slate-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="rounded-md bg-brand-600 px-2.5 py-1 text-sm font-bold text-white">{field.code}</span>
+                    <h3 className="font-semibold leading-5 text-ink">{field.name}</h3>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {rows.map((item) => (
+                      <article key={item.code} className="rounded-lg border border-slate-200 bg-white p-3">
+                        <div className="flex items-start gap-3">
+                          <span className="rounded-md bg-brand-50 px-2 py-1 text-sm font-bold text-brand-700">{item.code}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold leading-5 text-ink">{item.name}</p>
+                            <LevelBadges levels={item.levels} />
+                            <SpecialityNameCell code={item.code} name="" />
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+
+          <div className="mt-5 hidden max-h-[75vh] overflow-auto md:block">
             <table className="min-w-[920px] w-full border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-line">
@@ -103,7 +132,7 @@ export default function SpecialitiesPage() {
                 {fields.map((field) => {
                   const rows = specialities.filter((item) => item.fieldCode === field.code);
                   return rows.map((item, index) => (
-                    <tr key={item.code} id={index === 0 ? `field-${field.code}` : undefined} className="border-b border-slate-100">
+                    <tr key={item.code} className="border-b border-slate-100">
                       <td className="px-3 py-3 align-top">
                         {index === 0 ? (
                           <div>
@@ -147,7 +176,7 @@ function SpecialityNameCell({ code, name }: { code: string; name: string }) {
 
   return (
     <div>
-      <span>{name}</span>
+      {name ? <span>{name}</span> : null}
       {specializations.length ? (
         <details className="group mt-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50">
           <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white [&::-webkit-details-marker]:hidden">
@@ -167,6 +196,21 @@ function SpecialityNameCell({ code, name }: { code: string; name: string }) {
           </ul>
         </details>
       ) : null}
+    </div>
+  );
+}
+
+function LevelBadges({ levels }: { levels: (typeof specialityCatalogSource.specialities)[number]["levels"] }) {
+  const availableLevels = levelLabels.filter((level) => levels[level.key]);
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {availableLevels.map((level) => (
+        <span key={level.key} className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+          {level.label}
+        </span>
+      ))}
+      {!availableLevels.length ? <span className="text-xs text-muted">Рівні не позначені</span> : null}
     </div>
   );
 }

@@ -303,7 +303,7 @@ export function InstitutionsPageClient() {
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700">
           Інформація для вступників та дослідників.
         </p>
-        <h1 className="mt-3 text-3xl font-bold text-ink">EdМапа</h1>
+        <h1 className="mt-3 text-2xl font-bold text-ink sm:text-3xl">EdМапа</h1>
         <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-600">
           Інтерактивна карта і таблиця закладів вищої та/або фахової передвищої освіти на основі відкритих даних ЄДЕБО.
           Тут можна побачити розподіл закладів і контингенту за регіонами, швидко знайти потрібний заклад,
@@ -311,10 +311,16 @@ export function InstitutionsPageClient() {
         </p>
       </section>
 
-      <section className="mb-6 rounded-lg border border-line bg-white/95 p-5 shadow-soft">
-        {filtersError ? <p className="mb-4 rounded-md border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">{filtersError}</p> : null}
-        {filters ? (
-          <form key={queryString} className="grid gap-5" action="/institutions">
+      <section className="mb-6 rounded-lg border border-line bg-white/95 p-4 shadow-soft ring-1 ring-white/70 sm:p-5">
+        <details className="group">
+          <summary className="flex cursor-pointer list-none items-center justify-between rounded-md border border-brand-100 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-800 md:hidden">
+            <span>Фільтри</span>
+            <span className="text-xs text-brand-700 transition group-open:rotate-180" aria-hidden="true">▼</span>
+          </summary>
+          <div className="hidden pt-4 group-open:block md:block md:pt-0">
+            {filtersError ? <p className="mb-4 rounded-md border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">{filtersError}</p> : null}
+            {filters ? (
+              <form key={queryString} className="grid gap-5" action="/institutions">
             {sortKey !== "institution" || sortDirection !== "asc" ? (
               <>
                 <input type="hidden" name="sort" value={sortKey} />
@@ -440,10 +446,12 @@ export function InstitutionsPageClient() {
               «спеціаліст» віднесено до категорії «магістр», а записи з рівнями «молодший бакалавр» і «молодший
               спеціаліст» — до категорії «фаховий молодший бакалавр».
             </p>
-          </form>
-        ) : (
-          <FilterSkeleton />
-        )}
+              </form>
+            ) : (
+              <FilterSkeleton />
+            )}
+          </div>
+        </details>
       </section>
 
       {isFiltersLoading ? (

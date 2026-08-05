@@ -432,7 +432,7 @@ export function DashboardClient({ initialOptions = null }: { initialOptions?: Fi
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <section className="mb-6 rounded-lg border border-line bg-white p-6 shadow-soft">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-700">Аналітика відкритих освітніх даних</p>
-        <h1 className="mt-3 text-3xl font-bold text-ink">Дашборд: {datasetLabels[filters.datasetType]}</h1>
+        <h1 className="mt-3 text-2xl font-bold text-ink sm:text-3xl">Дашборд: {datasetLabels[filters.datasetType]}</h1>
         <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-600">
           {datasetDescriptions[filters.datasetType]}
         </p>
