@@ -33,7 +33,12 @@ export async function GET(request: Request) {
   });
 
   try {
-    const result = await warmDashboardApiCache({ all, scopes: ["summary", "charts"] });
+    const result = await warmDashboardApiCache({
+      all,
+      scopes: ["summary", "charts"],
+      includeInstitutions: true,
+      institutionScopes: ["institutionsFilters", "institutionsMap", "institutionsTable"]
+    });
     const failed = result.entries.filter((entry) => entry.status === "failed");
 
     await prisma.importRun.update({
@@ -48,6 +53,7 @@ export async function GET(request: Request) {
         parametersJson: JSON.stringify({
           mode: "dashboard-cache-warmup",
           scopes: ["summary", "charts"],
+          institutionScopes: ["institutionsFilters", "institutionsMap", "institutionsTable"],
           all,
           result
         })

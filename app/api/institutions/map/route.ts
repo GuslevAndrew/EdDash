@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { readDashboardApiCache, writeDashboardApiCache } from "@/lib/dashboard/api-cache";
 import { SUPPORTED_INSTITUTION_TYPE_CODES } from "@/lib/edbo/constants";
 import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical";
 import { mergeInstitutionWhere } from "@/lib/institutions/blocked";
@@ -41,6 +42,32 @@ function parseMapQuery(params: URLSearchParams) {
   });
 }
 
+function sortStrings(values: string[]) {
+  return [...values].sort((first, second) => first.localeCompare(second, "uk", { numeric: true }));
+}
+
+function getStandardMapCacheKey(parsed: ReturnType<typeof parseMapQuery>, snapshotDate: Date): string | null {
+  if (
+    parsed.region.length ||
+    parsed.institution.length ||
+    parsed.field.length ||
+    parsed.speciality.length ||
+    parsed.educationLevel.length ||
+    parsed.entryBase.length ||
+    parsed.studyForm.length
+  ) {
+    return null;
+  }
+
+  return JSON.stringify({
+    scope: "institutionsMap",
+    version: 1,
+    level: sortStrings(parsed.level),
+    date: snapshotDate.toISOString(),
+    showBlocked: parsed.showBlocked === "1"
+  });
+}
+
 export async function GET(request: Request) {
   try {
     const parsed = parseMapQuery(new URL(request.url).searchParams);
@@ -69,6 +96,9 @@ export async function GET(request: Request) {
     if (!selectedSnapshotDate) {
       return NextResponse.json({ snapshotDate: null, regions: [] }, { headers: cacheHeaders });
     }
+    const cacheKey = getStandardMapCacheKey(parsed, selectedSnapshotDate);
+    const cached = cacheKey ? await readDashboardApiCache(cacheKey) : null;
+    if (cached) return NextResponse.json(cached, { headers: cacheHeaders });
 
     const institutionWhere = mergeInstitutionWhere(
       {
@@ -157,7 +187,7 @@ export async function GET(request: Request) {
       totalsByRegion.set(regionId, current);
     }
 
-    return NextResponse.json({
+    const payload = {
       snapshotDate: selectedSnapshotDate.toISOString(),
       regions: [...totalsByRegion.entries()].map(([regionId, totals]) => ({
         regionId,
@@ -165,7 +195,10 @@ export async function GET(request: Request) {
         institutionsCount: totals.institutionsCount,
         studentsCount: totals.students
       }))
-    }, { headers: cacheHeaders });
+    };
+
+    if (cacheKey) await writeDashboardApiCache("institutionsMap", cacheKey, payload);
+    return NextResponse.json(payload, { headers: cacheHeaders });
   } catch (error) {
     console.error("institutions map api error", error);
     return NextResponse.json({ message: "Не вдалося отримати дані для карти." }, { status: 400 });

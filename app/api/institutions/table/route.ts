@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { readDashboardApiCache, writeDashboardApiCache } from "@/lib/dashboard/api-cache";
 import { SUPPORTED_INSTITUTION_TYPE_CODES } from "@/lib/edbo/constants";
 import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical";
 import { mergeInstitutionWhere } from "@/lib/institutions/blocked";
@@ -73,6 +74,38 @@ function parseTableQuery(params: URLSearchParams) {
     pageSize: params.get("pageSize") ?? undefined,
     sort: params.get("sort") ?? undefined,
     direction: params.get("direction") ?? undefined
+  });
+}
+
+function sortStrings(values: string[]) {
+  return [...values].sort((first, second) => first.localeCompare(second, "uk", { numeric: true }));
+}
+
+function getStandardTableCacheKey(parsed: ReturnType<typeof parseTableQuery>, snapshotDate: Date): string | null {
+  if (
+    parsed.region.length ||
+    parsed.institution.length ||
+    parsed.field.length ||
+    parsed.speciality.length ||
+    parsed.educationLevel.length ||
+    parsed.entryBase.length ||
+    parsed.studyForm.length ||
+    parsed.page !== 1 ||
+    parsed.pageSize > maxPageSize
+  ) {
+    return null;
+  }
+
+  return JSON.stringify({
+    scope: "institutionsTable",
+    version: 1,
+    level: sortStrings(parsed.level),
+    date: snapshotDate.toISOString(),
+    showBlocked: parsed.showBlocked === "1",
+    sort: parsed.sort,
+    direction: parsed.direction,
+    page: parsed.page,
+    pageSize: parsed.pageSize
   });
 }
 
@@ -192,6 +225,10 @@ export async function GET(request: Request) {
   const selectedEducationLevelIds = educationLevels
     .filter((item) => parsed.educationLevel.includes(getCanonicalEducationLevelName(item.name)))
     .map((item) => item.id);
+  const cacheKey = selectedSnapshotDate ? getStandardTableCacheKey(parsed, selectedSnapshotDate) : null;
+  const cached = cacheKey ? await readDashboardApiCache(cacheKey) : null;
+  if (cached) return NextResponse.json(cached, { headers: cacheHeaders });
+
   const where = mergeInstitutionWhere(
     {
       institutionTypeCode: { in: filteredInstitutionTypeCodes },
@@ -303,7 +340,7 @@ export async function GET(request: Request) {
       .map((institution) => [institution.externalId ?? "", { name: institution.name, website: institution.website, blockedAt: institution.blockedAt }] as const)
   ]);
 
-  return NextResponse.json({
+  const payload = {
     total,
     page: parsed.page,
     pageSize: parsed.pageSize,
@@ -336,5 +373,8 @@ export async function GET(request: Request) {
         email: institution.email
       };
     })
-  }, { headers: cacheHeaders });
+  };
+
+  if (cacheKey) await writeDashboardApiCache("institutionsTable", cacheKey, payload);
+  return NextResponse.json(payload, { headers: cacheHeaders });
 }

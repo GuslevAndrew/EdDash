@@ -2,7 +2,15 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import type { DashboardFiltersInput } from "@/lib/edbo/schemas";
 
-export type DashboardCacheScope = "filters" | "summary" | "charts" | "dynamics" | "institutionsFilters" | "institutionsMapDynamics";
+export type DashboardCacheScope =
+  | "filters"
+  | "summary"
+  | "charts"
+  | "dynamics"
+  | "institutionsFilters"
+  | "institutionsMap"
+  | "institutionsMapDynamics"
+  | "institutionsTable";
 
 const DASHBOARD_CACHE_VERSION = 2;
 
@@ -51,6 +59,22 @@ export async function ensureDashboardApiCacheTable() {
     CREATE INDEX IF NOT EXISTS "DashboardApiCache_scope_expiresAt_idx"
       ON "DashboardApiCache" ("scope", "expiresAt")
   `;
+}
+
+export async function cleanupDashboardApiCache() {
+  try {
+    await ensureDashboardApiCacheTable();
+    await prisma.$executeRaw`
+      DELETE FROM "DashboardApiCache"
+      WHERE "expiresAt" <= NOW()
+        OR (
+          "scope" IN ('filters', 'summary', 'charts', 'dynamics', 'institutionsFilters', 'institutionsMapDynamics')
+          AND "cacheKey" NOT LIKE '%"version":2%'
+        )
+    `;
+  } catch (error) {
+    console.error("dashboard api cache cleanup failed", error);
+  }
 }
 
 function isEmptyArrayFilter(value: unknown): boolean {

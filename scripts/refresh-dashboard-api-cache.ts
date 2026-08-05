@@ -5,8 +5,21 @@ function isAllMode() {
   return process.argv.includes("--all");
 }
 
+function includesInstitutionsMode() {
+  return process.argv.includes("--institutions");
+}
+
+function getScopes() {
+  if (process.argv.includes("--fast")) return ["summary" as const, "charts" as const];
+  return undefined;
+}
+
 async function main() {
-  const result = await warmDashboardApiCache({ all: isAllMode() });
+  const result = await warmDashboardApiCache({
+    all: isAllMode(),
+    scopes: getScopes(),
+    includeInstitutions: includesInstitutionsMode()
+  });
   const cached = result.entries.filter((entry) => entry.status === "cached").length;
   const failed = result.entries.filter((entry) => entry.status === "failed").length;
   const skipped = result.entries.filter((entry) => entry.status === "skipped").length;
