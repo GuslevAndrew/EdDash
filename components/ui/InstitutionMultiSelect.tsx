@@ -13,6 +13,7 @@ type InstitutionMultiSelectProps = {
   selectedInstitutionIds: number[];
   levelCodes?: string[];
   regionIds?: number[];
+  snapshotDate?: string;
   showBlocked?: boolean;
 };
 
@@ -28,6 +29,7 @@ export function InstitutionMultiSelect({
   selectedInstitutionIds,
   levelCodes = [],
   regionIds = [],
+  snapshotDate,
   showBlocked = false
 }: InstitutionMultiSelectProps) {
   const [query, setQuery] = useState("");
@@ -68,6 +70,7 @@ export function InstitutionMultiSelect({
       for (const levelCode of levelCodes) params.append("level", levelCode);
       for (const regionId of regionIds) params.append("region", String(regionId));
       for (const selectedId of selectedIds) params.append("selected", selectedId);
+      if (snapshotDate) params.set("date", snapshotDate);
       if (showBlocked) params.set("showBlocked", "1");
 
       setIsLoading(true);
@@ -91,7 +94,7 @@ export function InstitutionMultiSelect({
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [levelCodes, query, regionIds, selectedIds, showBlocked]);
+  }, [levelCodes, query, regionIds, selectedIds, showBlocked, snapshotDate]);
 
   function toggleInstitution(institutionId: number, checked: boolean) {
     setSelectedIds((current) => {

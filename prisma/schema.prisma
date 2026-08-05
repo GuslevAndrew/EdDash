@@ -59,6 +59,7 @@ model Institution {
   email               String?
   website             String?
   blockedAt           String?
+  blockedAtDate       DateTime?
   regionId            Int
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -70,6 +71,7 @@ model Institution {
   @@index([regionId])
   @@index([institutionTypeCode])
   @@index([parentExternalId])
+  @@index([blockedAtDate])
 }
 
 model EducationLevel {

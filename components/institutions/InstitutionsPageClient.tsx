@@ -357,6 +357,7 @@ export function InstitutionsPageClient() {
                   selectedInstitutionIds={selectedInstitutionIds}
                   levelCodes={filteredInstitutionTypeCodes}
                   regionIds={regionIds}
+                  snapshotDate={selectedSnapshotDateValue}
                   showBlocked={showBlocked}
                 />
               </div>

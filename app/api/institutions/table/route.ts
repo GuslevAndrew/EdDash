@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { SUPPORTED_INSTITUTION_TYPE_CODES } from "@/lib/edbo/constants";
 import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical";
+import { mergeInstitutionWhere } from "@/lib/institutions/blocked";
 
 const defaultPageSize = 25;
 const maxPageSize = 250;
@@ -164,12 +165,6 @@ export async function GET(request: Request) {
     parsed.studyForm.length
   );
 
-  const where: Prisma.InstitutionWhereInput = {
-    institutionTypeCode: { in: filteredInstitutionTypeCodes },
-    regionId: parsed.region.length ? { in: parsed.region } : undefined,
-    id: parsed.institution.length ? { in: parsed.institution } : undefined,
-    blockedAt: showBlocked ? undefined : null
-  };
   const institutionSelect = {
     id: true,
     name: true,
@@ -197,6 +192,15 @@ export async function GET(request: Request) {
   const selectedEducationLevelIds = educationLevels
     .filter((item) => parsed.educationLevel.includes(getCanonicalEducationLevelName(item.name)))
     .map((item) => item.id);
+  const where = mergeInstitutionWhere(
+    {
+      institutionTypeCode: { in: filteredInstitutionTypeCodes },
+      regionId: parsed.region.length ? { in: parsed.region } : undefined,
+      id: parsed.institution.length ? { in: parsed.institution } : undefined
+    },
+    showBlocked,
+    selectedSnapshotDate
+  );
   const studentSnapshotWhere: Prisma.StudentSnapshotWhereInput = {
     snapshotDate: selectedSnapshotDate ?? undefined,
     institution: where,
@@ -219,10 +223,10 @@ export async function GET(request: Request) {
   const matchingInstitutionIds = matchingStudentTotals.map((item) => item.institutionId);
   const effectiveWhere: Prisma.InstitutionWhereInput = hasStudentDetailFilters
     ? {
-        ...where,
+        ...(where ?? {}),
         id: matchingInstitutionIds.length ? { in: matchingInstitutionIds } : { in: [] }
       }
-    : where;
+    : where ?? {};
   const total = await prisma.institution.count({ where: effectiveWhere });
   const filteredInstitutionRefs = await prisma.institution.findMany({
     where: effectiveWhere,

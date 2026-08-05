@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import type { DashboardFiltersInput } from "@/lib/edbo/schemas";
 import { getEducationLevelNameVariants } from "@/lib/education-levels/canonical";
+import { addSnapshotActiveInstitutionFilter, addYearlyActiveInstitutionFilter } from "@/lib/institutions/blocked";
 
 export function buildSnapshotWhere(filters: Partial<DashboardFiltersInput>): Prisma.StudentSnapshotWhereInput {
   const regionIds = filters.regionIds?.length ? filters.regionIds : filters.regionId ? [filters.regionId] : [];
@@ -32,15 +33,16 @@ export function buildSnapshotWhere(filters: Partial<DashboardFiltersInput>): Pri
         }
       : undefined;
 
-  return {
-    snapshotDate: filters.snapshotDate ? new Date(filters.snapshotDate) : undefined,
+  const snapshotDate = filters.snapshotDate ? new Date(filters.snapshotDate) : undefined;
+  const institutionWhere = institutionTypeCodes.length ? { institutionTypeCode: { in: institutionTypeCodes } } : undefined;
+
+  const snapshotDates = (filters.snapshotDates?.length ? filters.snapshotDates : filters.snapshotDate ? [filters.snapshotDate] : [])
+    .map((date) => new Date(date))
+    .filter((date) => !Number.isNaN(date.getTime()));
+  const where: Prisma.StudentSnapshotWhereInput = {
+    snapshotDate,
     regionId: regionIds.length ? { in: regionIds } : undefined,
-    institution: institutionTypeCodes.length || !filters.includeBlockedInstitutions
-      ? {
-          institutionTypeCode: institutionTypeCodes.length ? { in: institutionTypeCodes } : undefined,
-          blockedAt: filters.includeBlockedInstitutions ? undefined : null
-        }
-      : undefined,
+    institution: institutionWhere,
     institutionId: institutionIds.length ? { in: institutionIds } : undefined,
     speciality: specialityWhere,
     specialityId: filters.specialityId,
@@ -50,6 +52,8 @@ export function buildSnapshotWhere(filters: Partial<DashboardFiltersInput>): Pri
     studyFormId: studyFormIds.length ? { in: studyFormIds } : undefined,
     studyForm: studyFormIds.length ? undefined : { code: { not: "total" } }
   };
+
+  return addSnapshotActiveInstitutionFilter(where, Boolean(filters.includeBlockedInstitutions), snapshotDates);
 }
 
 export function buildYearlyOutcomeWhere(filters: Partial<DashboardFiltersInput>): Prisma.YearlyOutcomeWhereInput {
@@ -82,16 +86,13 @@ export function buildYearlyOutcomeWhere(filters: Partial<DashboardFiltersInput>)
         }
       : undefined;
 
-  return {
+  const institutionWhere = institutionTypeCodes.length ? { institutionTypeCode: { in: institutionTypeCodes } } : undefined;
+
+  const where: Prisma.YearlyOutcomeWhereInput = {
     type: filters.datasetType === "graduates" ? "graduates" : "entrants",
     year: years.length ? { in: years } : undefined,
     regionId: regionIds.length ? { in: regionIds } : undefined,
-    institution: institutionTypeCodes.length || !filters.includeBlockedInstitutions
-      ? {
-          institutionTypeCode: institutionTypeCodes.length ? { in: institutionTypeCodes } : undefined,
-          blockedAt: filters.includeBlockedInstitutions ? undefined : null
-        }
-      : undefined,
+    institution: institutionWhere,
     institutionId: institutionIds.length ? { in: institutionIds } : undefined,
     speciality: specialityWhere,
     specialityId: filters.specialityId,
@@ -99,4 +100,6 @@ export function buildYearlyOutcomeWhere(filters: Partial<DashboardFiltersInput>)
     educationLevelId: educationLevelNameVariants.length ? undefined : filters.educationLevelId,
     entryBaseId: entryBaseIds.length ? { in: entryBaseIds } : undefined
   };
+
+  return addYearlyActiveInstitutionFilter(where, Boolean(filters.includeBlockedInstitutions), years);
 }

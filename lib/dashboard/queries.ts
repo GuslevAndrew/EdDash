@@ -6,6 +6,7 @@ import { formatCanonicalSpeciality } from "@/lib/specialities/canonical";
 import { specialityCatalogSource } from "@/lib/specialities/catalog";
 import { buildSnapshotWhere, buildYearlyOutcomeWhere } from "./filters";
 import type { DashboardFiltersInput } from "@/lib/edbo/schemas";
+import { activeInstitutionSql } from "@/lib/institutions/blocked";
 
 type NamedTotal = { name: string; value: number };
 type InstitutionDateTotal = NamedTotal & { series?: Array<{ label: string; value: number }> };
@@ -54,9 +55,6 @@ async function getCompleteSnapshotDates(): Promise<Date[]> {
 
   const dates = await prisma.studentSnapshot.groupBy({
     by: ["snapshotDate"],
-    where: {
-      institution: { blockedAt: null }
-    },
     _count: { _all: true },
     orderBy: { snapshotDate: "desc" }
   });
@@ -84,9 +82,6 @@ export async function getFilterOptions() {
   ] = await prisma.$transaction([
     prisma.studentSnapshot.groupBy({
       by: ["snapshotDate"],
-      where: {
-        institution: { blockedAt: null }
-      },
       _count: { _all: true },
       orderBy: { snapshotDate: "desc" }
     }),
@@ -1087,7 +1082,12 @@ async function getStudentSummaryCounts(filters: Partial<DashboardFiltersInput>):
   if (regionIds.length) conditions.push(Prisma.sql`s."regionId" IN (${sqlIn(regionIds)})`);
   if (institutionIds.length) conditions.push(Prisma.sql`s."institutionId" IN (${sqlIn(institutionIds)})`);
   if (institutionTypeCodes.length) conditions.push(Prisma.sql`i."institutionTypeCode" IN (${sqlIn(institutionTypeCodes)})`);
-  if (!filters.includeBlockedInstitutions) conditions.push(Prisma.sql`i."blockedAt" IS NULL`);
+  const activeInstitutionCondition = activeInstitutionSql(
+    "i",
+    Boolean(filters.includeBlockedInstitutions),
+    filters.snapshotDate ? Prisma.sql`${new Date(filters.snapshotDate)}` : undefined
+  );
+  if (activeInstitutionCondition) conditions.push(activeInstitutionCondition);
   if (fieldCodes.length) conditions.push(Prisma.sql`sp."canonicalFieldCode" IN (${sqlIn(fieldCodes)})`);
   if (specialityCodes.length) conditions.push(Prisma.sql`sp."canonicalCode" IN (${sqlIn(specialityCodes)})`);
   if (filters.specialityId) conditions.push(Prisma.sql`s."specialityId" = ${filters.specialityId}`);
@@ -1147,7 +1147,12 @@ async function getYearlySummaryCounts(filters: Partial<DashboardFiltersInput>): 
   if (regionIds.length) conditions.push(Prisma.sql`y."regionId" IN (${sqlIn(regionIds)})`);
   if (institutionIds.length) conditions.push(Prisma.sql`y."institutionId" IN (${sqlIn(institutionIds)})`);
   if (institutionTypeCodes.length) conditions.push(Prisma.sql`i."institutionTypeCode" IN (${sqlIn(institutionTypeCodes)})`);
-  if (!filters.includeBlockedInstitutions) conditions.push(Prisma.sql`i."blockedAt" IS NULL`);
+  const activeInstitutionCondition = activeInstitutionSql(
+    "i",
+    Boolean(filters.includeBlockedInstitutions),
+    Prisma.sql`make_date(y."year", 12, 31)`
+  );
+  if (activeInstitutionCondition) conditions.push(activeInstitutionCondition);
   if (fieldCodes.length) conditions.push(Prisma.sql`sp."canonicalFieldCode" IN (${sqlIn(fieldCodes)})`);
   if (specialityCodes.length) conditions.push(Prisma.sql`sp."canonicalCode" IN (${sqlIn(specialityCodes)})`);
   if (filters.specialityId) conditions.push(Prisma.sql`y."specialityId" = ${filters.specialityId}`);
@@ -1201,7 +1206,12 @@ async function getStudentDynamicsTotals(filters: Partial<DashboardFiltersInput>,
   if (regionIds.length) conditions.push(Prisma.sql`s."regionId" IN (${sqlIn(regionIds)})`);
   if (institutionIds.length) conditions.push(Prisma.sql`s."institutionId" IN (${sqlIn(institutionIds)})`);
   if (institutionTypeCodes.length) conditions.push(Prisma.sql`i."institutionTypeCode" IN (${sqlIn(institutionTypeCodes)})`);
-  if (!filters.includeBlockedInstitutions) conditions.push(Prisma.sql`i."blockedAt" IS NULL`);
+  const activeInstitutionCondition = activeInstitutionSql(
+    "i",
+    Boolean(filters.includeBlockedInstitutions),
+    Prisma.sql`s."snapshotDate"`
+  );
+  if (activeInstitutionCondition) conditions.push(activeInstitutionCondition);
   if (fieldCodes.length) conditions.push(Prisma.sql`sp."canonicalFieldCode" IN (${sqlIn(fieldCodes)})`);
   if (specialityCodes.length) conditions.push(Prisma.sql`sp."canonicalCode" IN (${sqlIn(specialityCodes)})`);
   if (filters.specialityId) conditions.push(Prisma.sql`s."specialityId" = ${filters.specialityId}`);
@@ -1248,7 +1258,12 @@ async function getYearlyDynamicsTotals(filters: Partial<DashboardFiltersInput>) 
   if (regionIds.length) conditions.push(Prisma.sql`y."regionId" IN (${sqlIn(regionIds)})`);
   if (institutionIds.length) conditions.push(Prisma.sql`y."institutionId" IN (${sqlIn(institutionIds)})`);
   if (institutionTypeCodes.length) conditions.push(Prisma.sql`i."institutionTypeCode" IN (${sqlIn(institutionTypeCodes)})`);
-  if (!filters.includeBlockedInstitutions) conditions.push(Prisma.sql`i."blockedAt" IS NULL`);
+  const activeInstitutionCondition = activeInstitutionSql(
+    "i",
+    Boolean(filters.includeBlockedInstitutions),
+    Prisma.sql`make_date(y."year", 12, 31)`
+  );
+  if (activeInstitutionCondition) conditions.push(activeInstitutionCondition);
   if (fieldCodes.length) conditions.push(Prisma.sql`sp."canonicalFieldCode" IN (${sqlIn(fieldCodes)})`);
   if (specialityCodes.length) conditions.push(Prisma.sql`sp."canonicalCode" IN (${sqlIn(specialityCodes)})`);
   if (filters.specialityId) conditions.push(Prisma.sql`y."specialityId" = ${filters.specialityId}`);

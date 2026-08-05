@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { readDashboardApiCache, writeDashboardApiCache } from "@/lib/dashboard/api-cache";
 import { SUPPORTED_INSTITUTION_TYPE_CODES } from "@/lib/edbo/constants";
 import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical";
+import { addSnapshotActiveInstitutionFilter } from "@/lib/institutions/blocked";
 
 const cacheHeaders = {
   "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400"
@@ -53,7 +54,7 @@ function sortStrings(values: string[]) {
 function getDynamicsCacheKey(parsed: ParsedDynamicsQuery): string {
   return JSON.stringify({
     scope: "institutionsMapDynamics",
-    version: 1,
+    version: 2,
     level: sortStrings(parsed.level),
     region: sortNumbers(parsed.region),
     institution: sortNumbers(parsed.institution),
@@ -86,8 +87,7 @@ export async function GET(request: Request) {
       regionId: parsed.region.length ? { in: parsed.region } : undefined,
       institutionId: parsed.institution.length ? { in: parsed.institution } : undefined,
       institution: {
-        institutionTypeCode: { in: filteredInstitutionTypeCodes },
-        blockedAt: showBlocked ? undefined : null
+        institutionTypeCode: { in: filteredInstitutionTypeCodes }
       },
       speciality: {
         canonicalFieldCode: parsed.field.length ? { in: parsed.field } : undefined,
@@ -98,10 +98,19 @@ export async function GET(request: Request) {
       studyFormId: parsed.studyForm.length ? { in: parsed.studyForm } : undefined,
       studyForm: parsed.studyForm.length ? undefined : { code: { not: "total" } }
     };
+    const snapshotDateRows = await prisma.studentSnapshot.groupBy({
+      by: ["snapshotDate"],
+      orderBy: { snapshotDate: "asc" }
+    });
+    const whereWithActiveInstitutions = addSnapshotActiveInstitutionFilter(
+      where,
+      showBlocked,
+      snapshotDateRows.map((item) => item.snapshotDate)
+    );
 
     const grouped = await prisma.studentSnapshot.groupBy({
       by: ["snapshotDate", "institutionId"],
-      where,
+      where: whereWithActiveInstitutions,
       _sum: { studentsCount: true },
       orderBy: [{ snapshotDate: "asc" }, { institutionId: "asc" }]
     });

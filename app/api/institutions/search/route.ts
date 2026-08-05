@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { SUPPORTED_INSTITUTION_TYPE_CODES } from "@/lib/edbo/constants";
+import { mergeInstitutionWhere } from "@/lib/institutions/blocked";
 
 const minSearchLength = 3;
 const maxResults = 30;
@@ -21,12 +21,17 @@ export async function GET(request: Request) {
     const regionIds = numberValues(searchParams.getAll("region"));
     const selectedIds = numberValues(searchParams.getAll("selected"));
     const showBlocked = searchParams.get("showBlocked") === "1";
+    const requestedDate = searchParams.get("date");
+    const cutoffDate = requestedDate && !Number.isNaN(new Date(requestedDate).getTime()) ? new Date(requestedDate) : null;
 
-    const baseWhere: Prisma.InstitutionWhereInput = {
-      institutionTypeCode: { in: levelCodes.length ? levelCodes : [...SUPPORTED_INSTITUTION_TYPE_CODES] },
-      regionId: regionIds.length ? { in: regionIds } : undefined,
-      blockedAt: showBlocked ? undefined : null
-    };
+    const baseWhere = mergeInstitutionWhere(
+      {
+        institutionTypeCode: { in: levelCodes.length ? levelCodes : [...SUPPORTED_INSTITUTION_TYPE_CODES] },
+        regionId: regionIds.length ? { in: regionIds } : undefined
+      },
+      showBlocked,
+      cutoffDate
+    );
 
     const selected = selectedIds.length
       ? await prisma.institution.findMany({

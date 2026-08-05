@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { readDashboardApiCache, writeDashboardApiCache } from "@/lib/dashboard/api-cache";
 import { SUPPORTED_INSTITUTION_TYPE_CODES } from "@/lib/edbo/constants";
 import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical";
+import { mergeInstitutionWhere } from "@/lib/institutions/blocked";
 
 const cacheHeaders = {
   "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400"
@@ -20,7 +20,7 @@ function getNumberParams(searchParams: URLSearchParams, key: string): number[] {
 function getFiltersCacheKey(selectedInstitutionIds: number[], showBlocked: boolean): string {
   return JSON.stringify({
     scope: "institutionsFilters",
-    version: 1,
+    version: 2,
     selectedInstitutionIds: [...selectedInstitutionIds].sort((first, second) => first - second),
     showBlocked
   });
@@ -34,17 +34,21 @@ export async function GET(request: Request) {
   const cached = await readDashboardApiCache(cacheKey);
   if (cached) return NextResponse.json(cached, { headers: cacheHeaders });
 
-  const statsWhere: Prisma.InstitutionWhereInput = {
-    institutionTypeCode: { in: [...SUPPORTED_INSTITUTION_TYPE_CODES] },
-    blockedAt: showBlocked ? undefined : null
-  };
+  const latestSnapshot = await prisma.studentSnapshot.findFirst({
+    orderBy: { snapshotDate: "desc" },
+    select: { snapshotDate: true }
+  });
+  const statsWhere = mergeInstitutionWhere(
+    { institutionTypeCode: { in: [...SUPPORTED_INSTITUTION_TYPE_CODES] } },
+    showBlocked,
+    latestSnapshot?.snapshotDate
+  );
 
   const [
     regions,
     selectedInstitutions,
     totalByLevel,
     totalRegions,
-    latestSnapshot,
     snapshotDateRows,
     specialities,
     educationLevels,
@@ -67,10 +71,6 @@ export async function GET(request: Request) {
       orderBy: { institutionTypeCode: "asc" }
     }),
     prisma.region.count({ where: { institutions: { some: statsWhere } } }),
-    prisma.studentSnapshot.findFirst({
-      orderBy: { snapshotDate: "desc" },
-      select: { snapshotDate: true }
-    }),
     prisma.studentSnapshot.groupBy({
       by: ["snapshotDate"],
       _count: { _all: true },

@@ -47,6 +47,7 @@ const statements = [
     "email" TEXT,
     "website" TEXT,
     "blockedAt" TEXT,
+    "blockedAtDate" DATETIME,
     "regionId" INTEGER NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -56,6 +57,7 @@ const statements = [
   `CREATE INDEX IF NOT EXISTS "Institution_regionId_idx" ON "Institution"("regionId")`,
   `CREATE INDEX IF NOT EXISTS "Institution_institutionTypeCode_idx" ON "Institution"("institutionTypeCode")`,
   `CREATE INDEX IF NOT EXISTS "Institution_parentExternalId_idx" ON "Institution"("parentExternalId")`,
+  `CREATE INDEX IF NOT EXISTS "Institution_blockedAtDate_idx" ON "Institution"("blockedAtDate")`,
   `CREATE TABLE IF NOT EXISTS "EducationLevel" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "code" TEXT NOT NULL,
@@ -175,6 +177,7 @@ async function main() {
   await addColumnIfMissing("Institution", "email", `TEXT`);
   await addColumnIfMissing("Institution", "website", `TEXT`);
   await addColumnIfMissing("Institution", "blockedAt", `TEXT`);
+  await addColumnIfMissing("Institution", "blockedAtDate", `DATETIME`);
   await addColumnIfMissing("StudentSnapshot", "studyFormId", `INTEGER`);
   await addColumnIfMissing("Speciality", "canonicalCode", `TEXT`);
   await addColumnIfMissing("Speciality", "canonicalName", `TEXT`);
@@ -183,6 +186,7 @@ async function main() {
   await addColumnIfMissing("Speciality", "canonicalSource", `TEXT`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Institution_institutionTypeCode_idx" ON "Institution"("institutionTypeCode")`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Institution_parentExternalId_idx" ON "Institution"("parentExternalId")`);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Institution_blockedAtDate_idx" ON "Institution"("blockedAtDate")`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Speciality_canonicalCode_idx" ON "Speciality"("canonicalCode")`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Speciality_canonicalFieldCode_idx" ON "Speciality"("canonicalFieldCode")`);
   await prisma.$executeRawUnsafe(`DROP INDEX IF EXISTS "StudentSnapshot_snapshotDate_institutionId_specialityId_educationLevelId_entryBaseId_key"`);

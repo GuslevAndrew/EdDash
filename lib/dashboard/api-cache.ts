@@ -4,7 +4,9 @@ import type { DashboardFiltersInput } from "@/lib/edbo/schemas";
 
 export type DashboardCacheScope = "filters" | "summary" | "charts" | "dynamics" | "institutionsFilters" | "institutionsMapDynamics";
 
-export const FILTER_OPTIONS_CACHE_KEY = JSON.stringify({ scope: "filters", version: 1 });
+const DASHBOARD_CACHE_VERSION = 2;
+
+export const FILTER_OPTIONS_CACHE_KEY = JSON.stringify({ scope: "filters", version: DASHBOARD_CACHE_VERSION });
 
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const EMPTY_ARRAY_FILTERS = [
@@ -86,12 +88,12 @@ export function getStandardDashboardCacheKey(scope: DashboardCacheScope, filters
 
   if (datasetType === "students") {
     if (!hasOnlyOneSelectedStudentDate(filters)) return null;
-    return JSON.stringify({ scope, datasetType, snapshotDate: filters.snapshotDate });
+    return JSON.stringify({ scope, version: DASHBOARD_CACHE_VERSION, datasetType, snapshotDate: filters.snapshotDate });
   }
 
   if (!hasOnlyOneSelectedYear(filters)) return null;
   const year = filters.years?.length ? filters.years[0] : filters.year;
-  return JSON.stringify({ scope, datasetType, year });
+  return JSON.stringify({ scope, version: DASHBOARD_CACHE_VERSION, datasetType, year });
 }
 
 export async function readDashboardApiCache<T>(cacheKey: string): Promise<T | null> {

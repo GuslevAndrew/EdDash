@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { fetchEdboJson } from "@/lib/edbo/client";
 import { EDBO_ENDPOINTS, INSTITUTION_TYPES } from "@/lib/edbo/constants";
 import { normalizeInstitutions } from "@/lib/edbo/normalize";
+import { parseBlockedAtDate } from "@/lib/institutions/blocked";
 
 const institutionTypes = [
   INSTITUTION_TYPES.higher,
@@ -56,6 +57,7 @@ async function main() {
         });
 
         const externalId = institution.externalId ?? `name:${institution.name}`;
+        const blockedAtDate = parseBlockedAtDate(institution.blockedAt);
         const existing = await prisma.institution.findUnique({ where: { externalId } });
         if (existing) {
           await prisma.institution.update({
@@ -74,6 +76,7 @@ async function main() {
               email: institution.email,
               website: institution.website,
               blockedAt: institution.blockedAt,
+              blockedAtDate,
               regionId: region.id
             }
           });
@@ -95,6 +98,7 @@ async function main() {
               email: institution.email,
               website: institution.website,
               blockedAt: institution.blockedAt,
+              blockedAtDate,
               regionId: region.id
             }
           });

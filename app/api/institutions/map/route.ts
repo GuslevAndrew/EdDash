@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { SUPPORTED_INSTITUTION_TYPE_CODES } from "@/lib/edbo/constants";
 import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical";
+import { mergeInstitutionWhere } from "@/lib/institutions/blocked";
 
 const cacheHeaders = {
   "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400"
@@ -69,14 +70,21 @@ export async function GET(request: Request) {
       return NextResponse.json({ snapshotDate: null, regions: [] }, { headers: cacheHeaders });
     }
 
+    const institutionWhere = mergeInstitutionWhere(
+      {
+        institutionTypeCode: { in: filteredInstitutionTypeCodes },
+        regionId: parsed.region.length ? { in: parsed.region } : undefined,
+        id: parsed.institution.length ? { in: parsed.institution } : undefined
+      },
+      showBlocked,
+      selectedSnapshotDate
+    );
+
     const snapshotWhere = {
       snapshotDate: selectedSnapshotDate,
       regionId: parsed.region.length ? { in: parsed.region } : undefined,
       institutionId: parsed.institution.length ? { in: parsed.institution } : undefined,
-      institution: {
-        institutionTypeCode: { in: filteredInstitutionTypeCodes },
-        blockedAt: showBlocked ? undefined : null
-      },
+      institution: institutionWhere,
       speciality: {
         canonicalFieldCode: parsed.field.length ? { in: parsed.field } : undefined,
         canonicalCode: parsed.speciality.length ? { in: parsed.speciality } : undefined
@@ -106,12 +114,7 @@ export async function GET(request: Request) {
       ? []
       : await prisma.institution.groupBy({
           by: ["regionId"],
-          where: {
-            institutionTypeCode: { in: filteredInstitutionTypeCodes },
-            regionId: parsed.region.length ? { in: parsed.region } : undefined,
-            id: parsed.institution.length ? { in: parsed.institution } : undefined,
-            blockedAt: showBlocked ? undefined : null
-          },
+          where: institutionWhere,
           _count: { id: true }
         });
 
