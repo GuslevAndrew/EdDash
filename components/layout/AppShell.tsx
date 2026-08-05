@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Footer } from "@/components/layout/Footer";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { NavLink } from "@/components/layout/NavLink";
+import { ScrollToTopButton } from "@/components/layout/ScrollToTopButton";
 
 const navigation = [
   { href: "/dashboard", label: "Дашборд" },
@@ -40,6 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <main className="flex-1">{children}</main>
+      <ScrollToTopButton />
       <Footer />
     </div>
   );
