@@ -1,0 +1,57 @@
+name: Scheduled EdDash maintenance
+
+on:
+  schedule:
+    - cron: "30 1 1,15 * *"
+  workflow_dispatch:
+    inputs:
+      warm_all_cache:
+        description: "Warm cache for all available dashboard dates and years"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+jobs:
+  refresh:
+    name: Refresh reference data and dashboard cache
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Refresh regions
+        run: npm run edbo:regions
+
+      - name: Refresh specialities
+        run: npm run edbo:specialities
+
+      - name: Refresh institutions
+        run: npm run edbo:institutions
+
+      - name: Warm standard dashboard cache
+        run: |
+          if [ "${{ inputs.warm_all_cache }}" = "true" ]; then
+            npm run dashboard:cache -- --all
+          else
+            npm run dashboard:cache
+          fi
