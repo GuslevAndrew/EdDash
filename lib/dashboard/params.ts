@@ -36,7 +36,15 @@ export function parseDashboardSearchParams(searchParams: URLSearchParams) {
     delete raw.entryBaseId;
   }
 
-  return dashboardFiltersSchema.parse(raw);
+  const parsed = dashboardFiltersSchema.parse(raw);
+  const snapshotDates = parsed.snapshotDates ?? [];
+  const years = parsed.years ?? [];
+
+  return {
+    ...parsed,
+    snapshotDate: parsed.snapshotDate ?? (snapshotDates.length === 1 ? snapshotDates[0] : undefined),
+    year: parsed.year ?? (years.length === 1 ? years[0] : undefined)
+  };
 }
 
 export function parsePartialDashboardSearchParams(searchParams: URLSearchParams) {
