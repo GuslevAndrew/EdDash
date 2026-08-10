@@ -8,6 +8,7 @@ import { useAutoCloseDetails } from "@/components/ui/useAutoCloseDetails";
 type MobileNavItem = {
   href: string;
   label: string;
+  featured?: boolean;
 };
 
 export function MobileNav({ items }: { items: MobileNavItem[] }) {
@@ -35,9 +36,13 @@ export function MobileNav({ items }: { items: MobileNavItem[] }) {
                 href={item.href}
                 className={clsx(
                   "rounded-md px-3 py-2.5 transition",
-                  isActive
-                    ? "bg-brand-50 text-brand-800 ring-1 ring-brand-100"
-                    : "text-slate-700 hover:bg-slate-50 hover:text-ink"
+                  item.featured
+                    ? isActive
+                      ? "bg-brand-700 text-white ring-1 ring-brand-700"
+                      : "bg-brand-600 text-white ring-1 ring-brand-500 hover:bg-brand-700"
+                    : isActive
+                      ? "bg-brand-50 text-brand-800 ring-1 ring-brand-100"
+                      : "text-slate-700 hover:bg-slate-50 hover:text-ink"
                 )}
               >
                 {item.label}

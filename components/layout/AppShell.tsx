@@ -8,7 +8,8 @@ import { ScrollToTopButton } from "@/components/layout/ScrollToTopButton";
 const navigation = [
   { href: "/dashboard", label: "Дашборд" },
   { href: "/institutions", label: "EdМапа" },
-  { href: "/specialities", label: "Галузі і спеціальності" }
+  { href: "/specialities", label: "Галузі і спеціальності" },
+  { href: "/education-programs", label: "Освітня програма", featured: true }
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -31,7 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <nav className="hidden flex-wrap items-center gap-1 rounded-lg border border-slate-200/80 bg-slate-50/80 p-1 text-sm font-medium md:flex">
             {navigation.map((item) => (
-              <NavLink key={item.href} href={item.href}>
+              <NavLink key={item.href} href={item.href} featured={item.featured}>
                 {item.label}
               </NavLink>
             ))}

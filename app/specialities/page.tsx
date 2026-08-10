@@ -65,11 +65,13 @@ export default function SpecialitiesPage() {
           <h2 className="text-lg font-semibold text-ink">Галузі знань</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {fields.map((field) => (
-              <a
-                key={field.code}
-                href={`#field-${field.code}`}
-                className="rounded-md border border-line bg-slate-50 p-4 hover:border-brand-500 hover:bg-brand-50"
-              >
+              <a key={field.code} href={`#field-mobile-${field.code}`} className="rounded-md border border-line bg-slate-50 p-4 hover:border-brand-500 hover:bg-brand-50 md:hidden">
+                <span className="text-lg font-bold text-brand-700">{field.code}</span>
+                <span className="ml-3 text-sm font-medium text-ink">{field.name}</span>
+              </a>
+            ))}
+            {fields.map((field) => (
+              <a key={field.code} href={`#field-desktop-${field.code}`} className="hidden rounded-md border border-line bg-slate-50 p-4 hover:border-brand-500 hover:bg-brand-50 md:block">
                 <span className="text-lg font-bold text-brand-700">{field.code}</span>
                 <span className="ml-3 text-sm font-medium text-ink">{field.name}</span>
               </a>
@@ -90,7 +92,7 @@ export default function SpecialitiesPage() {
               const rows = specialities.filter((item) => item.fieldCode === field.code);
 
               return (
-                <section key={field.code} id={`field-${field.code}`} className="rounded-lg border border-line bg-slate-50 p-4">
+                <section key={field.code} id={`field-mobile-${field.code}`} className="scroll-mt-24 rounded-lg border border-line bg-slate-50 p-4">
                   <div className="flex items-start gap-3">
                     <span className="rounded-md bg-brand-600 px-2.5 py-1 text-sm font-bold text-white">{field.code}</span>
                     <h3 className="font-semibold leading-5 text-ink">{field.name}</h3>
@@ -132,7 +134,7 @@ export default function SpecialitiesPage() {
                 {fields.map((field) => {
                   const rows = specialities.filter((item) => item.fieldCode === field.code);
                   return rows.map((item, index) => (
-                    <tr key={item.code} className="border-b border-slate-100">
+                    <tr key={item.code} id={index === 0 ? `field-desktop-${field.code}` : undefined} className="scroll-mt-24 border-b border-slate-100">
                       <td className="px-3 py-3 align-top">
                         {index === 0 ? (
                           <div>
