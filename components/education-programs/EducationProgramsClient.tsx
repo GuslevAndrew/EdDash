@@ -227,7 +227,7 @@ export function EducationProgramsClient() {
             <p className="mt-1 text-sm text-muted">Таблиця сформована за реальними назвами освітніх програм із файлу зарахованих на навчання.</p>
           </div>
           <div className="rounded-md border border-brand-100 bg-brand-50 px-3 py-2 text-sm text-brand-800">
-            Рядків: <span className="font-semibold">{formatNumber(data.filteredCount)}</span>
+            Освітніх програм за обраними фільтрами: <span className="font-semibold">{formatNumber(data.filteredCount)}</span>
           </div>
         </div>
 
