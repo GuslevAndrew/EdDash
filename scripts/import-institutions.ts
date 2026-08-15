@@ -17,6 +17,44 @@ type PreparedInstitution = ReturnType<typeof normalizeInstitutions>[number] & {
   blockedAtDate: Date | null;
 };
 
+type InstitutionUpsertRow = {
+  externalId: string;
+  parentExternalId: string | undefined;
+  name: string;
+  shortName: string | undefined;
+  institutionTypeCode: string;
+  institutionTypeName: string;
+  foundationYear: string | undefined;
+  ownership: string | undefined;
+  settlement: string | undefined;
+  address: string | undefined;
+  phone: string | undefined;
+  email: string | undefined;
+  website: string | undefined;
+  blockedAt: string | undefined;
+  blockedAtDate: Date | null;
+  regionId: number;
+};
+
+type ExistingInstitutionRow = {
+  externalId: string | null;
+  parentExternalId: string | null;
+  name: string;
+  shortName: string | null;
+  institutionTypeCode: string;
+  institutionTypeName: string;
+  foundationYear: string | null;
+  ownership: string | null;
+  settlement: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  blockedAt: string | null;
+  blockedAtDate: Date | null;
+  regionId: number;
+};
+
 function chunk<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let index = 0; index < items.length; index += size) {
@@ -31,6 +69,34 @@ function parseTypesArg() {
   if (!values.length) return institutionTypes;
   const selected = institutionTypes.filter((item) => values.includes(item.code));
   return selected.length ? selected : institutionTypes;
+}
+
+function sameOptionalString(left: string | null | undefined, right: string | null | undefined) {
+  return (left ?? null) === (right ?? null);
+}
+
+function sameOptionalDate(left: Date | null | undefined, right: Date | null | undefined) {
+  return (left?.getTime() ?? null) === (right?.getTime() ?? null);
+}
+
+function institutionHasChanged(existing: ExistingInstitutionRow, next: InstitutionUpsertRow) {
+  return (
+    !sameOptionalString(existing.parentExternalId, next.parentExternalId) ||
+    existing.name !== next.name ||
+    !sameOptionalString(existing.shortName, next.shortName) ||
+    existing.institutionTypeCode !== next.institutionTypeCode ||
+    existing.institutionTypeName !== next.institutionTypeName ||
+    !sameOptionalString(existing.foundationYear, next.foundationYear) ||
+    !sameOptionalString(existing.ownership, next.ownership) ||
+    !sameOptionalString(existing.settlement, next.settlement) ||
+    !sameOptionalString(existing.address, next.address) ||
+    !sameOptionalString(existing.phone, next.phone) ||
+    !sameOptionalString(existing.email, next.email) ||
+    !sameOptionalString(existing.website, next.website) ||
+    !sameOptionalString(existing.blockedAt, next.blockedAt) ||
+    !sameOptionalDate(existing.blockedAtDate, next.blockedAtDate) ||
+    existing.regionId !== next.regionId
+  );
 }
 
 async function main() {
@@ -107,7 +173,25 @@ async function main() {
         chunk(externalIds, 500).map((externalIdBatch) =>
           prisma.institution.findMany({
             where: { externalId: { in: externalIdBatch } },
-            select: { id: true, externalId: true }
+            select: {
+              id: true,
+              externalId: true,
+              parentExternalId: true,
+              name: true,
+              shortName: true,
+              institutionTypeCode: true,
+              institutionTypeName: true,
+              foundationYear: true,
+              ownership: true,
+              settlement: true,
+              address: true,
+              phone: true,
+              email: true,
+              website: true,
+              blockedAt: true,
+              blockedAtDate: true,
+              regionId: true
+            }
           })
         )
       )
@@ -115,7 +199,7 @@ async function main() {
     const existingByExternalId = new Map(
       existingInstitutions
         .filter((institution) => institution.externalId)
-        .map((institution) => [institution.externalId ?? "", institution.id])
+        .map((institution) => [institution.externalId ?? "", institution])
     );
 
     const rows = preparedInstitutions
@@ -143,9 +227,15 @@ async function main() {
       })
       .filter((institution): institution is NonNullable<typeof institution> => Boolean(institution));
     const rowsToCreate = rows.filter((institution) => !existingByExternalId.has(institution.externalId));
-    const rowsToUpdate = rows.filter((institution) => existingByExternalId.has(institution.externalId));
+    const rowsToUpdate = rows.filter((institution) => {
+      const existing = existingByExternalId.get(institution.externalId);
+      return existing ? institutionHasChanged(existing, institution) : false;
+    });
+    const skipped = rows.length - rowsToCreate.length - rowsToUpdate.length;
     let created = 0;
     let updated = 0;
+
+    console.log(`Підготовлено: ${rows.length}. Нові: ${rowsToCreate.length}, до оновлення: ${rowsToUpdate.length}, без змін: ${skipped}.`);
 
     for (const createBatch of chunk(rowsToCreate, batchSize)) {
       const result = await prisma.institution.createMany({
@@ -174,11 +264,12 @@ async function main() {
         finishedAt: new Date(),
         recordsReceived: received,
         recordsCreated: created,
-        recordsUpdated: updated
+        recordsUpdated: updated,
+        recordsSkipped: skipped
       }
     });
 
-    console.log(`Імпорт закладів завершено. Отримано: ${received}, створено: ${created}, оновлено: ${updated}.`);
+    console.log(`Імпорт закладів завершено. Отримано: ${received}, створено: ${created}, оновлено: ${updated}, пропущено: ${skipped}.`);
   } catch (error) {
     await prisma.importRun.update({
       where: { id: run.id },
