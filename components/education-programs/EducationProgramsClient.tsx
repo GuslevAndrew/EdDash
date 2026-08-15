@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { EducationProgramRow } from "@/lib/education-programs/types";
 import { specialityCatalogSource } from "@/lib/specialities/catalog";
 import { formatNumber } from "@/lib/utils/format";
+import { useAutoCloseDetails } from "@/components/ui/useAutoCloseDetails";
 
 type Option = {
   value: string;
@@ -312,6 +313,7 @@ function FilterSelect({
   disableSearch?: boolean;
 }) {
   const [query, setQuery] = useState("");
+  const detailsRef = useAutoCloseDetails();
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.toLocaleLowerCase("uk-UA").trim();
     if (!normalizedQuery) return options;
@@ -321,7 +323,7 @@ function FilterSelect({
   return (
     <div>
       <span className="text-sm font-medium text-slate-700">{label}</span>
-      <details className="group relative mt-1">
+      <details ref={detailsRef} className="group relative mt-1">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md border border-line bg-white px-3 py-2 text-sm shadow-sm outline-none transition hover:border-brand-200 hover:bg-brand-50/50 focus:border-brand-500">
           <span className="truncate">{labelFromOptions(selectedValues, options, placeholder, selectedLabel)}</span>
           <span className="text-xs text-muted transition group-open:rotate-180" aria-hidden="true">▼</span>
