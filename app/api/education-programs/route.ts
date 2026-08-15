@@ -35,6 +35,12 @@ function getSpecializationValue(row: EducationProgramRow): string {
   return `${row.specializationCode}|||${row.specializationName}`;
 }
 
+function normalizeRegionLabel(region: string): string {
+  const trimmed = region.trim();
+  if (!trimmed || trimmed.includes("?")) return "Без регіону";
+  return trimmed;
+}
+
 function uniqueOptions(values: string[]): Option[] {
   return [...new Set(values.filter(Boolean))]
     .sort((first, second) => first.localeCompare(second, "uk", { sensitivity: "base", numeric: true }))
@@ -72,7 +78,10 @@ export function GET(request: Request) {
     specializations: getValues(url.searchParams, "specialization")
   };
   const limit = getLimit(url.searchParams);
-  const rows = dataset.rows;
+  const rows = dataset.rows.map((row) => ({
+    ...row,
+    region: normalizeRegionLabel(row.region)
+  }));
   const filteredRows = rows.filter((row) => matchesFilters(row, filters));
 
   const institutionRows = rows.filter((row) => {
