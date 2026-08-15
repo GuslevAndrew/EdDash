@@ -224,7 +224,6 @@ export function EducationProgramsClient() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-ink">Освітні програми</h2>
-            <p className="mt-1 text-sm text-muted">Таблиця сформована за реальними назвами освітніх програм із файлу зарахованих на навчання.</p>
           </div>
           <div className="rounded-md border border-brand-100 bg-brand-50 px-3 py-2 text-sm text-brand-800">
             Освітніх програм за обраними фільтрами: <span className="font-semibold">{formatNumber(data.filteredCount)}</span>
