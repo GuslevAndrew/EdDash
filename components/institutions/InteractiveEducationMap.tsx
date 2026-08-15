@@ -171,6 +171,12 @@ function buildDynamicsQuery(query: string): string {
   return params.toString();
 }
 
+function appendClientCacheVersion(query: string): string {
+  const params = new URLSearchParams(query);
+  params.set("mapClientVersion", "2");
+  return params.toString();
+}
+
 async function fetchJsonWithRetry<T>(url: string, signal: AbortSignal, attempts = 2): Promise<T> {
   let lastError: unknown;
 
@@ -213,6 +219,8 @@ export function InteractiveEducationMap({
   const [mapMetric, setMapMetric] = useState<MapMetric>("institutions");
   const isSelectedMode = selectedRegionIds.length > 0;
   const dynamicsQuery = useMemo(() => buildDynamicsQuery(query), [query]);
+  const mapRequestQuery = useMemo(() => appendClientCacheVersion(query), [query]);
+  const dynamicsRequestQuery = useMemo(() => appendClientCacheVersion(dynamicsQuery), [dynamicsQuery]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -243,7 +251,7 @@ export function InteractiveEducationMap({
     setData(null);
     onDataChange?.(null);
 
-    fetchJsonWithRetry<RegionMapResponse>(`/api/institutions/map${query ? `?${query}` : ""}`, controller.signal, 3)
+    fetchJsonWithRetry<RegionMapResponse>(`/api/institutions/map?${mapRequestQuery}`, controller.signal, 3)
       .then((nextData) => {
         setData(nextData);
         onDataChange?.(nextData);
@@ -255,7 +263,7 @@ export function InteractiveEducationMap({
       });
 
     return () => controller.abort();
-  }, [isReady, onDataChange, query]);
+  }, [isReady, mapRequestQuery, onDataChange]);
 
   useEffect(() => {
     if (!isReady || !data) {
@@ -270,7 +278,7 @@ export function InteractiveEducationMap({
     setSelectedDynamicsDates([]);
 
     const timeoutId = window.setTimeout(() => {
-      fetchJsonWithRetry<MapDynamicsResponse>(`/api/institutions/map/dynamics${dynamicsQuery ? `?${dynamicsQuery}` : ""}`, controller.signal, 2)
+      fetchJsonWithRetry<MapDynamicsResponse>(`/api/institutions/map/dynamics?${dynamicsRequestQuery}`, controller.signal, 2)
         .then((nextData) => {
           setDynamics(nextData);
           setSelectedDynamicsDates(nextData.points.map((point) => point.date));
@@ -285,7 +293,7 @@ export function InteractiveEducationMap({
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [data, dynamicsQuery, isReady]);
+  }, [data, dynamicsRequestQuery, isReady]);
 
   const statsByRegion = useMemo(() => {
     const entries = data?.regions.map((region) => [normalizeRegionName(region.regionName), region] as const) ?? [];
