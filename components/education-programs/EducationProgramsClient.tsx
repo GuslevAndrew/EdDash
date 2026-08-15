@@ -204,11 +204,7 @@ export function EducationProgramsClient() {
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
-          <p className="text-sm text-muted">
-            Показано за фільтрами: <span className="font-semibold text-ink">{formatNumber(data.filteredCount)}</span> з{" "}
-            <span className="font-semibold text-ink">{formatNumber(data.totalRows)}</span> освітніх програм за {data.year} рік.
-          </p>
+        <div className="mt-5 flex justify-end border-t border-slate-200 pt-4">
           <button
             type="button"
             onClick={resetFilters}
