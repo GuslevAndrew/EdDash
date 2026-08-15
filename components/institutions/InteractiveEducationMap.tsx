@@ -173,7 +173,7 @@ function buildDynamicsQuery(query: string): string {
 
 function appendClientCacheVersion(query: string): string {
   const params = new URLSearchParams(query);
-  params.set("mapClientVersion", "2");
+  params.set("mapClientVersion", "3");
   return params.toString();
 }
 
