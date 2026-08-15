@@ -171,13 +171,35 @@ function buildDynamicsQuery(query: string): string {
   return params.toString();
 }
 
+async function fetchJsonWithRetry<T>(url: string, signal: AbortSignal, attempts = 2): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const response = await fetch(url, { signal });
+      if (!response.ok) throw new Error(`Request failed with ${response.status}`);
+      return (await response.json()) as T;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") throw error;
+      lastError = error;
+      if (attempt < attempts - 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 450 + attempt * 700));
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Request failed");
+}
+
 export function InteractiveEducationMap({
   query,
+  isReady,
   selectedRegionIds,
   filterChips,
   onDataChange
 }: {
   query: string;
+  isReady: boolean;
   selectedRegionIds: number[];
   filterChips: MapFilterChip[];
   onDataChange?: (data: RegionMapResponse | null) => void;
@@ -210,16 +232,18 @@ export function InteractiveEducationMap({
   }, []);
 
   useEffect(() => {
+    if (!isReady) {
+      setData(null);
+      onDataChange?.(null);
+      return;
+    }
+
     const controller = new AbortController();
     setError("");
     setData(null);
     onDataChange?.(null);
 
-    fetch(`/api/institutions/map${query ? `?${query}` : ""}`, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("Map data request failed");
-        return response.json() as Promise<RegionMapResponse>;
-      })
+    fetchJsonWithRetry<RegionMapResponse>(`/api/institutions/map${query ? `?${query}` : ""}`, controller.signal, 3)
       .then((nextData) => {
         setData(nextData);
         onDataChange?.(nextData);
@@ -231,20 +255,22 @@ export function InteractiveEducationMap({
       });
 
     return () => controller.abort();
-  }, [onDataChange, query]);
+  }, [isReady, onDataChange, query]);
 
   useEffect(() => {
+    if (!isReady || !data) {
+      setDynamics(null);
+      setSelectedDynamicsDates([]);
+      return;
+    }
+
     const controller = new AbortController();
     setDynamicsError("");
     setDynamics(null);
     setSelectedDynamicsDates([]);
 
     const timeoutId = window.setTimeout(() => {
-      fetch(`/api/institutions/map/dynamics${dynamicsQuery ? `?${dynamicsQuery}` : ""}`, { signal: controller.signal })
-        .then((response) => {
-          if (!response.ok) throw new Error("Map dynamics request failed");
-          return response.json() as Promise<MapDynamicsResponse>;
-        })
+      fetchJsonWithRetry<MapDynamicsResponse>(`/api/institutions/map/dynamics${dynamicsQuery ? `?${dynamicsQuery}` : ""}`, controller.signal, 2)
         .then((nextData) => {
           setDynamics(nextData);
           setSelectedDynamicsDates(nextData.points.map((point) => point.date));
@@ -259,7 +285,7 @@ export function InteractiveEducationMap({
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [dynamicsQuery]);
+  }, [data, dynamicsQuery, isReady]);
 
   const statsByRegion = useMemo(() => {
     const entries = data?.regions.map((region) => [normalizeRegionName(region.regionName), region] as const) ?? [];

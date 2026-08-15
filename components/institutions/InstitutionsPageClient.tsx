@@ -214,6 +214,20 @@ export function InstitutionsPageClient() {
     ]
   );
   const tableQuery = filters ? makeQueryString(currentParams) : queryString;
+  const mapQuery = filters
+    ? makeQueryString({
+        ...(selectedInstitutionTypeCodes.length ? { level: selectedInstitutionTypeCodes } : {}),
+        ...(regionIds.length ? { region: regionIds.map(String) } : {}),
+        ...(selectedInstitutionIds.length ? { institution: selectedInstitutionIds.map(String) } : {}),
+        ...(selectedSnapshotDateValue ? { date: selectedSnapshotDateValue } : {}),
+        ...(selectedFieldCodes.length ? { field: selectedFieldCodes } : {}),
+        ...(selectedSpecialityCodes.length ? { speciality: selectedSpecialityCodes } : {}),
+        ...(selectedEducationLevelNames.length ? { educationLevel: selectedEducationLevelNames } : {}),
+        ...(selectedEntryBaseIds.length ? { entryBase: selectedEntryBaseIds.map(String) } : {}),
+        ...(selectedStudyFormIds.length ? { studyForm: selectedStudyFormIds.map(String) } : {}),
+        ...(showBlocked ? { showBlocked: "1" } : {})
+      })
+    : "";
   const studentsTotal = useMemo(
     () => mapSummary?.regions.reduce((sum, region) => sum + region.studentsCount, 0) ?? null,
     [mapSummary?.regions]
@@ -492,7 +506,8 @@ export function InstitutionsPageClient() {
       )}
 
       <InteractiveEducationMap
-        query={tableQuery}
+        query={mapQuery}
+        isReady={Boolean(filters)}
         selectedRegionIds={regionIds}
         filterChips={mapFilterChips}
         onDataChange={handleMapDataChange}

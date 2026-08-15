@@ -68,7 +68,7 @@ export async function cleanupDashboardApiCache() {
       DELETE FROM "DashboardApiCache"
       WHERE "expiresAt" <= NOW()
         OR (
-          "scope" IN ('filters', 'summary', 'charts', 'dynamics', 'institutionsFilters', 'institutionsMapDynamics')
+          "scope" IN ('filters', 'summary', 'charts', 'dynamics', 'institutionsFilters', 'institutionsMap', 'institutionsMapDynamics')
           AND "cacheKey" NOT LIKE '%"version":2%'
         )
     `;

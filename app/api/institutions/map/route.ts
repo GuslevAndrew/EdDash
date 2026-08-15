@@ -61,7 +61,7 @@ function getStandardMapCacheKey(parsed: ReturnType<typeof parseMapQuery>, snapsh
 
   return JSON.stringify({
     scope: "institutionsMap",
-    version: 1,
+    version: 2,
     level: sortStrings(parsed.level),
     date: snapshotDate.toISOString(),
     showBlocked: parsed.showBlocked === "1"
