@@ -30,8 +30,19 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: npm
+
+      - name: Check required secrets
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Missing GitHub Actions secret DATABASE_URL. Add the production PostgreSQL connection string in repository secrets."
+            exit 1
+          fi
+          if [ -z "$DIRECT_URL" ]; then
+            echo "::error::Missing GitHub Actions secret DIRECT_URL. Add the direct PostgreSQL connection string in repository secrets."
+            exit 1
+          fi
 
       - name: Install dependencies
         run: npm ci
