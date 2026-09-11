@@ -3,7 +3,7 @@ import { FILTER_OPTIONS_CACHE_KEY, readDashboardApiCache, writeDashboardApiCache
 import { getFilterOptions } from "@/lib/dashboard/queries";
 
 const cacheHeaders = {
-  "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800"
+  "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"
 };
 
 export async function GET() {

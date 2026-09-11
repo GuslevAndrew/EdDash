@@ -6,7 +6,7 @@ import { getCanonicalEducationLevelName } from "@/lib/education-levels/canonical
 import { mergeInstitutionWhere } from "@/lib/institutions/blocked";
 
 const cacheHeaders = {
-  "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400"
+  "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"
 };
 const HIDDEN_FILTER_REGION_NAMES = new Set(["Автономна Республіка Крим"]);
 
